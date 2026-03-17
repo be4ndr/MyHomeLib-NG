@@ -1,9 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
-using MyHomeLibNext.Core.Interfaces;
-using MyHomeLibNext.Infrastructure.Data;
-using MyHomeLibNext.Infrastructure.Repositories;
+using MyHomeLibNG.Core.Interfaces;
+using MyHomeLibNG.Infrastructure.Data;
+using MyHomeLibNG.Infrastructure.Repositories;
 
-namespace MyHomeLibNext.Infrastructure;
+namespace MyHomeLibNG.Infrastructure;
 
 public static class ServiceCollectionExtensions
 {

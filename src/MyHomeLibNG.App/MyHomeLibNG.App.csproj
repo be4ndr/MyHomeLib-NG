@@ -15,7 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\MyHomeLibNext.Application\MyHomeLibNext.Application.csproj" />
-    <ProjectReference Include="..\MyHomeLibNext.Infrastructure\MyHomeLibNext.Infrastructure.csproj" />
+    <ProjectReference Include="..\MyHomeLibNG.Application\MyHomeLibNG.Application.csproj" />
+    <ProjectReference Include="..\MyHomeLibNG.Infrastructure\MyHomeLibNG.Infrastructure.csproj" />
   </ItemGroup>
 </Project>

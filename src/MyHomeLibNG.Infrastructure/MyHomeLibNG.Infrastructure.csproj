@@ -5,8 +5,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\MyHomeLibNext.Core\MyHomeLibNext.Core.csproj" />
-    <ProjectReference Include="..\MyHomeLibNext.Application\MyHomeLibNext.Application.csproj" />
+    <ProjectReference Include="..\MyHomeLibNG.Core\MyHomeLibNG.Core.csproj" />
+    <ProjectReference Include="..\MyHomeLibNG.Application\MyHomeLibNG.Application.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.8" />

@@ -1,12 +1,14 @@
 using Microsoft.Data.Sqlite;
-using MyHomeLibNext.Core.Enums;
-using MyHomeLibNext.Core.Interfaces;
-using MyHomeLibNext.Core.Models;
+using MyHomeLibNG.Core.Enums;
+using MyHomeLibNG.Core.Interfaces;
+using MyHomeLibNG.Core.Models;
+using System.Globalization;
 
-namespace MyHomeLibNext.Infrastructure.Repositories;
+namespace MyHomeLibNG.Infrastructure.Repositories;
 
 public sealed class SqliteLibraryRepository : ILibraryRepository
 {
+    private static readonly DateTimeStyles TimestampStyles = DateTimeStyles.RoundtripKind;
     private readonly string _connectionString;
 
     public SqliteLibraryRepository(string connectionString)
@@ -90,8 +92,10 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
             Name = reader.GetString(1),
             LibraryType = (LibraryType)reader.GetInt32(2),
             ConnectionInfo = reader.GetString(3),
-            CreatedAtUtc = DateTimeOffset.Parse(reader.GetString(4)),
-            LastOpenedAtUtc = lastOpenedRaw is null ? null : DateTimeOffset.Parse(lastOpenedRaw)
+            CreatedAtUtc = DateTimeOffset.Parse(reader.GetString(4), CultureInfo.InvariantCulture, TimestampStyles),
+            LastOpenedAtUtc = lastOpenedRaw is null
+                ? null
+                : DateTimeOffset.Parse(lastOpenedRaw, CultureInfo.InvariantCulture, TimestampStyles)
         };
     }
 }

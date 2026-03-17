@@ -1,6 +1,6 @@
 using Avalonia;
 
-namespace MyHomeLibNext.App;
+namespace MyHomeLibNG.App;
 
 internal static class Program
 {
