@@ -1,0 +1,33 @@
+using Avalonia;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Markup.Xaml;
+using Microsoft.Extensions.DependencyInjection;
+using MyHomeLibNext.Application;
+using MyHomeLibNext.Infrastructure;
+
+namespace MyHomeLibNext.App;
+
+public partial class App : Application
+{
+    private ServiceProvider? _serviceProvider;
+
+    public override void Initialize()
+    {
+        AvaloniaXamlLoader.Load(this);
+    }
+
+    public override void OnFrameworkInitializationCompleted()
+    {
+        var services = new ServiceCollection();
+        services.AddMyHomeLibApplication();
+        services.AddMyHomeLibInfrastructure("Data Source=MyHomeLibNext.db");
+        _serviceProvider = services.BuildServiceProvider();
+
+        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+        {
+            desktop.MainWindow = new MainWindow();
+        }
+
+        base.OnFrameworkInitializationCompleted();
+    }
+}

@@ -1,0 +1,24 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="MyHomeLibNext.App.MainWindow"
+        Title="MyHomeLibNext"
+        Width="1100"
+        Height="700"
+        MinWidth="900"
+        MinHeight="600">
+  <Grid ColumnDefinitions="2*,3*" Margin="16" ColumnSpacing="12">
+    <Border Grid.Column="0" Padding="12" BorderBrush="Gray" BorderThickness="1" CornerRadius="6">
+      <StackPanel>
+        <TextBlock Text="Libraries" FontSize="20" FontWeight="Bold" Margin="0,0,0,10" />
+        <TextBlock Text="[Placeholder] Library profiles will be listed here." />
+      </StackPanel>
+    </Border>
+
+    <Border Grid.Column="1" Padding="12" BorderBrush="Gray" BorderThickness="1" CornerRadius="6">
+      <StackPanel>
+        <TextBlock Text="Books" FontSize="20" FontWeight="Bold" Margin="0,0,0,10" />
+        <TextBlock Text="[Placeholder] Books from selected library will appear here." />
+      </StackPanel>
+    </Border>
+  </Grid>
+</Window>
