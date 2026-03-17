@@ -1,6 +1,6 @@
-using MyHomeLibNext.Core.Enums;
+using MyHomeLibNG.Core.Enums;
 
-namespace MyHomeLibNext.Core.Models;
+namespace MyHomeLibNG.Core.Models;
 
 public sealed class Book
 {

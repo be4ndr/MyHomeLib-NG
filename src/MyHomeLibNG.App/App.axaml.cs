@@ -2,12 +2,13 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Microsoft.Extensions.DependencyInjection;
-using MyHomeLibNext.Application;
-using MyHomeLibNext.Infrastructure;
+using MyHomeLibNG.Application;
+using MyHomeLibNG.Infrastructure;
+using AvaloniaApplication = Avalonia.Application;
 
-namespace MyHomeLibNext.App;
+namespace MyHomeLibNG.App;
 
-public partial class App : Application
+public partial class App : AvaloniaApplication
 {
     private ServiceProvider? _serviceProvider;
 
@@ -20,7 +21,7 @@ public partial class App : Application
     {
         var services = new ServiceCollection();
         services.AddMyHomeLibApplication();
-        services.AddMyHomeLibInfrastructure("Data Source=MyHomeLibNext.db");
+        services.AddMyHomeLibInfrastructure("Data Source=MyHomeLibNG.db");
         _serviceProvider = services.BuildServiceProvider();
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)

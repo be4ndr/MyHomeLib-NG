@@ -1,10 +1,10 @@
-# HomeLib-Next
+# MyHomeLib-NG
 
 A modern, high-performance desktop library manager inspired by MyHomeLib. https://github.com/OleksiyPenkov/MyHomeLib
 
 ## Freeware app description
 
-MyHomeLibNext is planned as a **freeware desktop application** distributed through GitHub releases.
+MyHomeLibNG is planned as a **freeware desktop application** distributed through GitHub releases.
 It is designed for readers, librarians, and collectors who need an offline-first tool that remains responsive even with very large catalogs.
 
 ### Planned freeware distribution model
@@ -24,22 +24,22 @@ It is designed for readers, librarians, and collectors who need an offline-first
 ## Solution structure
 
 ```text
-MyHomeLibNext.sln
+MyHomeLibNG.sln
 src/
-  MyHomeLibNext.App/             # Avalonia desktop UI
-  MyHomeLibNext.Core/            # domain models, enums, interfaces
-  MyHomeLibNext.Application/     # application services / use cases
-  MyHomeLibNext.Infrastructure/  # SQLite, filesystem-ready infrastructure implementations
+  MyHomeLibNG.App/             # Avalonia desktop UI
+  MyHomeLibNG.Core/            # domain models, enums, interfaces
+  MyHomeLibNG.Application/     # application services / use cases
+  MyHomeLibNG.Infrastructure/  # SQLite, filesystem-ready infrastructure implementations
 tests/
-  MyHomeLibNext.Tests/           # unit tests
+  MyHomeLibNG.Tests/           # unit tests
 ```
 
 ### Dependency direction
 
-- `MyHomeLibNext.App` -> `Application`, `Infrastructure`
-- `MyHomeLibNext.Application` -> `Core`
-- `MyHomeLibNext.Infrastructure` -> `Core`, `Application`
-- `MyHomeLibNext.Core` -> (no project dependencies)
+- `MyHomeLibNG.App` -> `Application`, `Infrastructure`
+- `MyHomeLibNG.Application` -> `Core`
+- `MyHomeLibNG.Infrastructure` -> `Core`, `Application`
+- `MyHomeLibNG.Core` -> (no project dependencies)
 
 This keeps infrastructure and UI concerns separated from domain concerns:
 

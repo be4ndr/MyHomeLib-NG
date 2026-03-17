@@ -1,4 +1,4 @@
-namespace MyHomeLibNext.Core.Models;
+namespace MyHomeLibNG.Core.Models;
 
 public sealed class Author
 {

@@ -1,4 +1,4 @@
-namespace MyHomeLibNext.Core.Enums;
+namespace MyHomeLibNG.Core.Enums;
 
 public enum FileFormat
 {
