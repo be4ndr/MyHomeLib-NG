@@ -1,6 +1,6 @@
 using Microsoft.Data.Sqlite;
 
-namespace MyHomeLibNG.Infrastructure.Data;
+namespace MyHomeLibNext.Infrastructure.Data;
 
 public sealed class SqliteSchemaInitializer
 {

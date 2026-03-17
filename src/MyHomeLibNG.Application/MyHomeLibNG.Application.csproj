@@ -8,6 +8,6 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.2" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\MyHomeLibNG.Core\MyHomeLibNG.Core.csproj" />
+    <ProjectReference Include="..\MyHomeLibNext.Core\MyHomeLibNext.Core.csproj" />
   </ItemGroup>
 </Project>

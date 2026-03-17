@@ -1,6 +1,6 @@
 using Avalonia.Controls;
 
-namespace MyHomeLibNG.App;
+namespace MyHomeLibNext.App;
 
 public partial class MainWindow : Window
 {

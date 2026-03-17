@@ -1,9 +1,9 @@
 using Microsoft.Data.Sqlite;
-using MyHomeLibNG.Core.Enums;
-using MyHomeLibNG.Core.Interfaces;
-using MyHomeLibNG.Core.Models;
+using MyHomeLibNext.Core.Enums;
+using MyHomeLibNext.Core.Interfaces;
+using MyHomeLibNext.Core.Models;
 
-namespace MyHomeLibNG.Infrastructure.Repositories;
+namespace MyHomeLibNext.Infrastructure.Repositories;
 
 public sealed class SqliteLibraryRepository : ILibraryRepository
 {

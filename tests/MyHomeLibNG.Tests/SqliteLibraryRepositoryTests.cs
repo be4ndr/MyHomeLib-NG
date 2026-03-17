@@ -1,16 +1,16 @@
-using MyHomeLibNG.Core.Enums;
-using MyHomeLibNG.Core.Models;
-using MyHomeLibNG.Infrastructure.Data;
-using MyHomeLibNG.Infrastructure.Repositories;
+using MyHomeLibNext.Core.Enums;
+using MyHomeLibNext.Core.Models;
+using MyHomeLibNext.Infrastructure.Data;
+using MyHomeLibNext.Infrastructure.Repositories;
 
-namespace MyHomeLibNG.Tests;
+namespace MyHomeLibNext.Tests;
 
 public class SqliteLibraryRepositoryTests
 {
     [Fact]
     public async Task AddAndGetById_Works()
     {
-        var dbPath = Path.Combine(Path.GetTempPath(), $"myhomelibng-test-{Guid.NewGuid():N}.db");
+        var dbPath = Path.Combine(Path.GetTempPath(), $"MyHomeLibNext-test-{Guid.NewGuid():N}.db");
         var connectionString = $"Data Source={dbPath}";
 
         try

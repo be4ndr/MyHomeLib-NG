@@ -1,6 +1,6 @@
-using MyHomeLibNG.Core.Enums;
+using MyHomeLibNext.Core.Enums;
 
-namespace MyHomeLibNG.Core.Models;
+namespace MyHomeLibNext.Core.Models;
 
 public sealed class LibraryProfile
 {

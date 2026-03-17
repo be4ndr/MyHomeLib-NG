@@ -1,6 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 
-namespace MyHomeLibNG.Application;
+namespace MyHomeLibNext.Application;
 
 public static class ServiceCollectionExtensions
 {

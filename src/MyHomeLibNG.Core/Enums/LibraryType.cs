@@ -1,4 +1,4 @@
-namespace MyHomeLibNG.Core.Enums;
+namespace MyHomeLibNext.Core.Enums;
 
 public enum LibraryType
 {

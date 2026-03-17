@@ -14,7 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\MyHomeLibNG.Core\MyHomeLibNG.Core.csproj" />
-    <ProjectReference Include="..\..\src\MyHomeLibNG.Infrastructure\MyHomeLibNG.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\MyHomeLibNext.Core\MyHomeLibNext.Core.csproj" />
+    <ProjectReference Include="..\..\src\MyHomeLibNext.Infrastructure\MyHomeLibNext.Infrastructure.csproj" />
   </ItemGroup>
 </Project>

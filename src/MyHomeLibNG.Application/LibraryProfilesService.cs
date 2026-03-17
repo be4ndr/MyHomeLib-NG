@@ -1,7 +1,7 @@
-using MyHomeLibNG.Core.Interfaces;
-using MyHomeLibNG.Core.Models;
+using MyHomeLibNext.Core.Interfaces;
+using MyHomeLibNext.Core.Models;
 
-namespace MyHomeLibNG.Application;
+namespace MyHomeLibNext.Application;
 
 public sealed class LibraryProfilesService
 {

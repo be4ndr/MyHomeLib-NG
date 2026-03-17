@@ -1,6 +1,6 @@
-using MyHomeLibNG.Core.Models;
+using MyHomeLibNext.Core.Models;
 
-namespace MyHomeLibNG.Core.Interfaces;
+namespace MyHomeLibNext.Core.Interfaces;
 
 public interface ILibraryRepository
 {
