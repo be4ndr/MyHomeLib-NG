@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <entry>
+    <id>https://www.gutenberg.org/ebooks/1342</id>
+    <title>Pride and Prejudice</title>
+    <author>
+      <name>Jane Austen</name>
+    </author>
+    <category term="Fiction" />
+    <category term="Courtship" />
+    <link rel="http://opds-spec.org/acquisition" type="application/epub+zip" href="https://www.gutenberg.org/ebooks/1342.epub.images" />
+    <link rel="text/html" type="text/html" href="https://www.gutenberg.org/ebooks/1342" />
+  </entry>
+</feed>

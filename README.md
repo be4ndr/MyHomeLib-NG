@@ -66,3 +66,7 @@ This keeps infrastructure and UI concerns separated from domain concerns:
 4. Introduce remote-library API adapters in Infrastructure.
 5. Add view models and observable UI bindings for library and books lists.
 6. Add packaging/update workflow for desktop distribution.
+
+Flibusta is not part of the primary supported provider set.
+
+If added later, it will be implemented only as an optional legacy compatibility adapter after phase 2.
