@@ -1,0 +1,25 @@
+{
+  "id": "google-book-1",
+  "volumeInfo": {
+    "title": "The Time Machine",
+    "authors": ["H. G. Wells"],
+    "language": "en",
+    "description": "A time travel classic.",
+    "categories": ["Science Fiction"],
+    "publisher": "Example Press",
+    "publishedDate": "1895-05-07",
+    "industryIdentifiers": [
+      { "type": "ISBN_10", "identifier": "1234567890" },
+      { "type": "ISBN_13", "identifier": "9781234567897" }
+    ],
+    "imageLinks": {
+      "thumbnail": "https://example.test/time-machine.jpg"
+    }
+  },
+  "accessInfo": {
+    "webReaderLink": "https://books.google.test/read/google-book-1"
+  },
+  "saleInfo": {
+    "buyLink": "https://books.google.test/buy/google-book-1"
+  }
+}

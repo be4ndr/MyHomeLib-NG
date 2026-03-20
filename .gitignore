@@ -1,2 +1,6 @@
 .git
 /.idea/
+/global.json
+/example/
+**/bin/
+**/obj/

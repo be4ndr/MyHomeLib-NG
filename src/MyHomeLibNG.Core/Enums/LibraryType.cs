@@ -2,7 +2,9 @@ namespace MyHomeLibNG.Core.Enums;
 
 public enum LibraryType
 {
-    Local = 0,
-    RemoteApi = 1,
-    Archive = 2
+    Folder = 0,
+    Online = 1,
+    Archive = 2,
+    Local = Folder,
+    RemoteApi = Online
 }

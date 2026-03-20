@@ -1,0 +1,15 @@
+{
+  "docs": [
+    {
+      "key": "/works/OL27448W",
+      "title": "Pride and Prejudice",
+      "author_name": ["Jane Austen"],
+      "language": ["eng"],
+      "subject": ["Courtship", "Social classes"],
+      "publisher": ["Open Library"],
+      "first_publish_year": 1813,
+      "isbn": ["0141439513", "9780141439518"],
+      "cover_i": 12345
+    }
+  ]
+}
