@@ -7,11 +7,21 @@ namespace MyHomeLibNG.Infrastructure.Providers.Offline;
 public sealed class OfflineBookProvider : IBookProvider
 {
     private readonly LibraryProfile _profile;
-    private readonly IInpxCatalogParser _catalogParser;
-    private readonly IOfflineLibraryFileSystem _fileSystem;
+    private readonly IOfflineCatalogCache _catalogCache;
     private readonly IOfflineBookLocationResolver _locationResolver;
     private readonly OfflineContentStorageRegistry _contentStorageRegistry;
-    private Task<IReadOnlyList<OfflineCatalogEntry>>? _catalogTask;
+
+    public OfflineBookProvider(
+        LibraryProfile profile,
+        IOfflineCatalogCache catalogCache,
+        IOfflineBookLocationResolver locationResolver,
+        OfflineContentStorageRegistry contentStorageRegistry)
+    {
+        _profile = profile;
+        _catalogCache = catalogCache;
+        _locationResolver = locationResolver;
+        _contentStorageRegistry = contentStorageRegistry;
+    }
 
     public OfflineBookProvider(
         LibraryProfile profile,
@@ -19,12 +29,12 @@ public sealed class OfflineBookProvider : IBookProvider
         IOfflineLibraryFileSystem fileSystem,
         IOfflineBookLocationResolver locationResolver,
         OfflineContentStorageRegistry contentStorageRegistry)
+        : this(
+            profile,
+            new OfflineCatalogCache(catalogParser, fileSystem),
+            locationResolver,
+            contentStorageRegistry)
     {
-        _profile = profile;
-        _catalogParser = catalogParser;
-        _fileSystem = fileSystem;
-        _locationResolver = locationResolver;
-        _contentStorageRegistry = contentStorageRegistry;
     }
 
     public string Id => _profile.ProviderId;
@@ -79,17 +89,7 @@ public sealed class OfflineBookProvider : IBookProvider
 
     private Task<IReadOnlyList<OfflineCatalogEntry>> LoadCatalogAsync(CancellationToken cancellationToken)
     {
-        _catalogTask ??= LoadCatalogCoreAsync(cancellationToken);
-        return _catalogTask;
-    }
-
-    private async Task<IReadOnlyList<OfflineCatalogEntry>> LoadCatalogCoreAsync(CancellationToken cancellationToken)
-    {
-        var sourceSettings = _profile.FolderSource
-            ?? throw new InvalidOperationException("Offline provider requires folder source settings.");
-
-        await using var stream = await _fileSystem.OpenReadAsync(sourceSettings.InpxFilePath, cancellationToken);
-        return await _catalogParser.ParseAsync(stream, _profile.Name, cancellationToken);
+        return _catalogCache.GetCatalogAsync(_profile, cancellationToken);
     }
 
     private static bool Matches(NormalizedBook book, string query)

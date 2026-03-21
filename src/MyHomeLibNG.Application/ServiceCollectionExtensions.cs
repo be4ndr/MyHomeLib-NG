@@ -6,6 +6,7 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddMyHomeLibApplication(this IServiceCollection services)
     {
+        services.AddSingleton<IActiveLibraryContext, ActiveLibraryContext>();
         services.AddSingleton<LibraryProfilesService>();
         services.AddSingleton<LibraryBooksService>();
         return services;

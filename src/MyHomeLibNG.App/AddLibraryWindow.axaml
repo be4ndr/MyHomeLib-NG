@@ -1,0 +1,92 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="MyHomeLibNG.App.AddLibraryWindow"
+        Width="560"
+        Height="560"
+        MinWidth="520"
+        MinHeight="520"
+        Title="Add Library"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        Background="#FFF4F1EA">
+  <Border Background="#FFFBF9F4" BorderBrush="#FFE0D9CC" BorderThickness="1" CornerRadius="22" Padding="22">
+    <Grid RowDefinitions="Auto,Auto,Auto,*,Auto">
+      <StackPanel Grid.Row="0" Spacing="4">
+        <TextBlock Text="Add a library" FontSize="24" FontWeight="SemiBold" Foreground="#FF1F2527" />
+        <TextBlock Text="Choose a local offline catalog or a preset online source." Foreground="#FF5E676B" />
+      </StackPanel>
+
+      <Border Grid.Row="1"
+              Margin="0,16,0,0"
+              Background="#FFFEF1E2"
+              BorderBrush="#FFE4A85F"
+              BorderThickness="1"
+              CornerRadius="14"
+              Padding="12"
+              IsVisible="{Binding HasValidationMessage}">
+        <TextBlock Text="{Binding ValidationMessage}" TextWrapping="Wrap" Foreground="#FF6F4A12" />
+      </Border>
+
+      <StackPanel Grid.Row="2" Margin="0,16,0,0" Spacing="12">
+        <StackPanel Spacing="6">
+          <TextBlock Text="Preset" FontWeight="SemiBold" Foreground="#FF1F2527" />
+          <ComboBox ItemsSource="{Binding ProviderOptions}"
+                    SelectedItem="{Binding SelectedOption}" />
+        </StackPanel>
+
+        <StackPanel Spacing="6">
+          <TextBlock Text="Display name" FontWeight="SemiBold" Foreground="#FF1F2527" />
+          <TextBox Text="{Binding LibraryName}" Watermark="My offline shelf" />
+        </StackPanel>
+      </StackPanel>
+
+      <Grid Grid.Row="3" Margin="0,16,0,0">
+        <StackPanel Spacing="14">
+          <Border Background="#FFF0ECE3" CornerRadius="16" Padding="14">
+            <TextBlock Text="{Binding SelectedOption.Description}" TextWrapping="Wrap" Foreground="#FF5E676B" />
+          </Border>
+
+          <StackPanel Spacing="10" IsVisible="{Binding SelectedOption.IsOffline}">
+            <StackPanel Spacing="6">
+              <TextBlock Text="INPX file path" FontWeight="SemiBold" Foreground="#FF1F2527" />
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBox Text="{Binding InpxFilePath}" Watermark="C:\Books\catalog.inpx" />
+                <Button Grid.Column="1" Margin="10,0,0,0" Content="Browse..." Click="OnBrowseInpxClicked" />
+              </Grid>
+            </StackPanel>
+
+            <StackPanel Spacing="6">
+              <TextBlock Text="Archive directory" FontWeight="SemiBold" Foreground="#FF1F2527" />
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBox Text="{Binding ArchiveDirectoryPath}" Watermark="C:\Books\Archives" />
+                <Button Grid.Column="1" Margin="10,0,0,0" Content="Browse..." Click="OnBrowseArchiveClicked" />
+              </Grid>
+            </StackPanel>
+          </StackPanel>
+
+          <StackPanel Spacing="10" IsVisible="{Binding SelectedOption.IsOnline}">
+            <Border Background="#FFFFFFFF" BorderBrush="#FFE0D9CC" BorderThickness="1" CornerRadius="16" Padding="14">
+              <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto">
+                <TextBlock Text="Base URL" Foreground="#FF5E676B" />
+                <TextBlock Grid.Column="1" Margin="12,0,0,8" Text="{Binding SelectedOption.ApiBaseUrl}" TextWrapping="Wrap" Foreground="#FF1F2527" />
+                <TextBlock Grid.Row="1" Text="Search" Foreground="#FF5E676B" />
+                <TextBlock Grid.Row="1" Grid.Column="1" Margin="12,0,0,0" Text="{Binding SelectedOption.SearchEndpoint}" TextWrapping="Wrap" Foreground="#FF1F2527" />
+              </Grid>
+            </Border>
+          </StackPanel>
+        </StackPanel>
+      </Grid>
+
+      <StackPanel Grid.Row="4" Margin="0,16,0,0" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+        <Button Content="Cancel" Click="OnCancelClicked" />
+        <Button Background="#FF2B6A69"
+                Foreground="White"
+                BorderBrush="#FF2B6A69"
+                CornerRadius="12"
+                Padding="16,10"
+                Content="Save library"
+                Click="OnSaveClicked" />
+      </StackPanel>
+    </Grid>
+  </Border>
+</Window>
