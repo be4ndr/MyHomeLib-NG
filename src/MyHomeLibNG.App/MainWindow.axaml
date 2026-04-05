@@ -53,12 +53,52 @@
       <Setter Property="CornerRadius" Value="12" />
       <Setter Property="Padding" Value="14,10" />
     </Style>
+    <Style Selector="ToggleButton.mode-nav">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="18" />
+      <Setter Property="Padding" Value="12" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    </Style>
+    <Style Selector="ToggleButton.mode-nav:pointerover">
+      <Setter Property="Background" Value="{StaticResource SurfaceAltBrush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource StrokeBrush}" />
+    </Style>
+    <Style Selector="ToggleButton.mode-nav:checked">
+      <Setter Property="Background" Value="{StaticResource AccentSoftBrush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+    </Style>
+    <Style Selector="ToggleButton.directory-tab">
+      <Setter Property="Background" Value="{StaticResource SurfaceStrongBrush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource StrokeBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="12" />
+      <Setter Property="Padding" Value="12,8" />
+    </Style>
+    <Style Selector="ToggleButton.directory-tab:checked">
+      <Setter Property="Background" Value="{StaticResource AccentSoftBrush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+    </Style>
     <Style Selector="Border.status-pill">
       <Setter Property="CornerRadius" Value="999" />
       <Setter Property="Padding" Value="10,4" />
       <Setter Property="Background" Value="{StaticResource AccentSoftBrush}" />
     </Style>
     <Style Selector="Border.status-pill.warning">
+      <Setter Property="Background" Value="#FFF7E4CC" />
+    </Style>
+    <Style Selector="Border.availability-pill">
+      <Setter Property="CornerRadius" Value="999" />
+      <Setter Property="Padding" Value="10,4" />
+    </Style>
+    <Style Selector="Border.availability-pill.ready">
+      <Setter Property="Background" Value="{StaticResource AccentSoftBrush}" />
+    </Style>
+    <Style Selector="Border.availability-pill.unavailable">
+      <Setter Property="Background" Value="#FFE9E5DC" />
+    </Style>
+    <Style Selector="Border.availability-pill.warning">
       <Setter Property="Background" Value="#FFF7E4CC" />
     </Style>
     <Style Selector="ListBox#LibrariesList ListBoxItem">
@@ -81,6 +121,40 @@
     </Style>
     <Style Selector="ListBox#BooksList ListBoxItem:selected">
       <Setter Property="Background" Value="#FFF1F7F6" />
+      <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+    </Style>
+    <Style Selector="ListBox#DirectoryEntriesList ListBoxItem">
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Margin" Value="0,0,0,10" />
+      <Setter Property="Background" Value="{StaticResource SurfaceStrongBrush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource StrokeBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+    </Style>
+    <Style Selector="ListBox#DirectoryEntriesList ListBoxItem:selected">
+      <Setter Property="Background" Value="{StaticResource AccentSoftBrush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+    </Style>
+    <Style Selector="ListBox#DirectoryBooksList ListBoxItem">
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Margin" Value="0,0,0,12" />
+      <Setter Property="Background" Value="{StaticResource SurfaceStrongBrush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource StrokeBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+    </Style>
+    <Style Selector="ListBox#DirectoryBooksList ListBoxItem:selected">
+      <Setter Property="Background" Value="#FFF1F7F6" />
+      <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+    </Style>
+    <Style Selector="ListBox#DirectoryAlphabetList ListBoxItem">
+      <Setter Property="Padding" Value="10,4" />
+      <Setter Property="Margin" Value="0,0,8,8" />
+      <Setter Property="Background" Value="{StaticResource SurfaceStrongBrush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource StrokeBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="999" />
+    </Style>
+    <Style Selector="ListBox#DirectoryAlphabetList ListBoxItem:selected">
+      <Setter Property="Background" Value="{StaticResource AccentSoftBrush}" />
       <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
     </Style>
   </Window.Styles>
@@ -132,8 +206,36 @@
       </Grid>
     </Border>
 
-    <Grid Grid.Row="1" Margin="22,18,22,18" ColumnDefinitions="280,*,340">
-      <Border Grid.Column="0" Classes="panel">
+    <Grid Grid.Row="1" Margin="22,18,22,18" ColumnDefinitions="108,280,*">
+      <Border Grid.Column="0" Classes="panel" Padding="14">
+        <Grid RowDefinitions="Auto,*,Auto">
+          <StackPanel Spacing="4">
+            <TextBlock Text="Modes" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
+            <TextBlock Text="Workspace" FontSize="13" Foreground="{StaticResource TextMutedBrush}" />
+          </StackPanel>
+
+          <StackPanel Grid.Row="1" Margin="0,18,0,18" Spacing="10">
+            <ToggleButton Classes="mode-nav" IsChecked="{Binding IsLibrariesMode, Mode=OneWay}" Click="OnLibrariesModeClicked">
+              <TextBlock Text="Libraries" HorizontalAlignment="Center" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
+            </ToggleButton>
+            <ToggleButton Classes="mode-nav" IsChecked="{Binding IsSearchMode, Mode=OneWay}" Click="OnSearchModeClicked">
+              <TextBlock Text="Search" HorizontalAlignment="Center" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
+            </ToggleButton>
+            <ToggleButton Classes="mode-nav" IsChecked="{Binding IsDirectoryMode, Mode=OneWay}" Click="OnDirectoryModeClicked">
+              <TextBlock Text="Directory" HorizontalAlignment="Center" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
+            </ToggleButton>
+          </StackPanel>
+
+          <Border Grid.Row="2" Background="{StaticResource SurfaceAltBrush}" CornerRadius="16" Padding="12">
+            <StackPanel Spacing="6">
+              <TextBlock Text="Active" FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
+              <TextBlock Text="{Binding ActiveLibraryName}" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" TextWrapping="Wrap" MaxHeight="40" TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+          </Border>
+        </Grid>
+      </Border>
+
+      <Border Grid.Column="1" Classes="panel" Margin="18,0,0,0">
         <Grid RowDefinitions="Auto,Auto,*,Auto">
           <StackPanel Grid.Row="0" Spacing="4">
             <TextBlock Text="Libraries" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
@@ -214,7 +316,7 @@
         </Grid>
       </Border>
 
-      <Grid Grid.Column="1" Margin="18,0,18,0" RowDefinitions="Auto,*,Auto">
+      <Grid Grid.Column="2" Margin="18,0,0,0" RowDefinitions="Auto,*,Auto">
         <Border Grid.Row="0"
                 Background="{StaticResource WarningBrush}"
                 BorderBrush="{StaticResource WarningStrokeBrush}"
@@ -229,90 +331,191 @@
           </DockPanel>
         </Border>
 
-        <Border Grid.Row="1" Classes="panel">
-          <Grid RowDefinitions="Auto,*">
-            <DockPanel Grid.Row="0" Margin="0,0,0,18">
-              <StackPanel DockPanel.Dock="Left" Spacing="4">
-                <TextBlock Text="Catalog" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
-                <TextBlock Text="A structured search-first view with readable metadata and better selection cues." FontSize="13" Foreground="{StaticResource TextMutedBrush}" />
+        <Grid Grid.Row="1">
+          <Border Classes="panel" IsVisible="{Binding IsLibrariesMode}">
+            <Grid RowDefinitions="Auto,Auto,Auto,*">
+              <StackPanel Spacing="4">
+                <TextBlock Text="Library workspace" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
+                <TextBlock Text="Use this mode to add sources, switch libraries, review status, and jump into Search or Directory." FontSize="13" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
               </StackPanel>
-              <Border DockPanel.Dock="Right" Background="{StaticResource SurfaceAltBrush}" CornerRadius="999" Padding="12,6">
-                <TextBlock Text="{Binding ResultsSummary}" Foreground="{StaticResource TextStrongBrush}" FontWeight="SemiBold" />
+
+              <Border Grid.Row="1" Margin="0,18,0,18" Background="{StaticResource SurfaceAltBrush}" CornerRadius="18" Padding="18">
+                <Grid>
+                  <StackPanel Spacing="10" IsVisible="{Binding HasLibraries}">
+                    <TextBlock Text="{Binding LibraryCountSummary}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
+                    <TextBlock Text="{Binding ActiveLibraryName}" FontSize="24" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding ActiveLibrarySourceSummary}" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
+                  </StackPanel>
+                  <StackPanel Spacing="10" IsVisible="{Binding ShowFirstRunState}">
+                    <TextBlock Text="No libraries yet" FontSize="24" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
+                    <TextBlock Text="Add your first source to activate Search and prepare Directory mode." Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
+                    <Button Classes="primary" HorizontalAlignment="Left" Content="Add your first library" Click="OnAddLibraryClicked" />
+                  </StackPanel>
+                </Grid>
               </Border>
-            </DockPanel>
 
-            <Grid Grid.Row="1">
-              <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="420" Spacing="12" IsVisible="{Binding ShowFirstRunState}">
-                <Border Width="72" Height="72" CornerRadius="24" Background="{StaticResource AccentSoftBrush}" HorizontalAlignment="Center">
-                  <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="L" FontSize="26" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
-                </Border>
-                <TextBlock Text="Add a library to begin" FontSize="24" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="{StaticResource TextStrongBrush}" />
-                <TextBlock Text="Once a source is added, choose it from the sidebar and use the search bar above to explore titles." TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource TextMutedBrush}" />
-                <Button Classes="primary" HorizontalAlignment="Center" Content="Create your first library" Click="OnAddLibraryClicked" />
+              <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="12" Margin="0,0,0,18">
+                <Button Classes="primary" Content="Open Search" Click="OnSearchModeClicked" IsEnabled="{Binding HasSelectedLibrary}" />
+                <Button Classes="secondary" Content="Open Directory" Click="OnDirectoryModeClicked" IsEnabled="{Binding HasSelectedLibrary}" />
+                <Button Classes="secondary" Content="Refresh libraries" Click="OnRefreshClicked" IsEnabled="{Binding CanRefresh}" />
               </StackPanel>
 
-              <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="420" Spacing="12" IsVisible="{Binding ShowSearchPromptState}">
-                <Border Width="72" Height="72" CornerRadius="24" Background="{StaticResource SurfaceAltBrush}" HorizontalAlignment="Center">
-                  <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="S" FontSize="26" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
+              <Grid Grid.Row="3" ColumnDefinitions="*,*">
+                <Border Grid.Column="0" Margin="0,0,9,0" Background="{StaticResource SurfaceStrongBrush}" BorderBrush="{StaticResource StrokeBrush}" BorderThickness="1" CornerRadius="18" Padding="18">
+                  <StackPanel Spacing="10">
+                    <TextBlock Text="Status overview" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                      <Border Classes="status-pill" IsVisible="{Binding ShowHealthySourceStatus}">
+                        <TextBlock Text="{Binding ActiveLibrarySourceStatus}" Foreground="{StaticResource AccentBrush}" FontSize="11" FontWeight="SemiBold" />
+                      </Border>
+                      <Border Classes="status-pill warning" IsVisible="{Binding ShowWarningSourceStatus}">
+                        <TextBlock Text="{Binding ActiveLibrarySourceStatus}" Foreground="#FF8A5A0B" FontSize="11" FontWeight="SemiBold" />
+                      </Border>
+                    </StackPanel>
+                    <TextBlock Text="{Binding ActiveLibrarySourceSummary}" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
+                  </StackPanel>
                 </Border>
-                <TextBlock Text="Search the active library" FontSize="24" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="{StaticResource TextStrongBrush}" />
-                <TextBlock Text="Try a title, author, ISBN, or keyword. Results will appear as richer catalog cards with details on the right." TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource TextMutedBrush}" />
-              </StackPanel>
-
-              <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="420" Spacing="12" IsVisible="{Binding ShowNoResultsState}">
-                <Border Width="72" Height="72" CornerRadius="24" Background="{StaticResource SurfaceAltBrush}" HorizontalAlignment="Center">
-                  <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="0" FontSize="26" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
+                <Border Grid.Column="1" Margin="9,0,0,0" Background="{StaticResource SurfaceStrongBrush}" BorderBrush="{StaticResource StrokeBrush}" BorderThickness="1" CornerRadius="18" Padding="18">
+                  <StackPanel Spacing="10">
+                    <TextBlock Text="Next steps" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
+                    <TextBlock Text="Search mode keeps the current catalog and details layout." Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
+                    <TextBlock Text="Directory mode is a scaffold for later implementation." Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
+                  </StackPanel>
                 </Border>
-                <TextBlock Text="Nothing matched that search" FontSize="24" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="{StaticResource TextStrongBrush}" />
-                <TextBlock Text="Try a broader keyword, a different author spelling, or another library source from the left." TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource TextMutedBrush}" />
-              </StackPanel>
-
-              <ListBox x:Name="BooksList"
-                       IsVisible="{Binding HasResults}"
-                       ItemsSource="{Binding Results}"
-                       SelectedItem="{Binding SelectedBook}"
-                       SelectionChanged="OnBooksSelectionChanged"
-                       IsEnabled="{Binding CanBrowseResults}"
-                       Background="Transparent"
-                       BorderThickness="0">
-                <ListBox.ItemTemplate>
-                  <DataTemplate x:DataType="vm:BookListItemViewModel">
-                    <Border CornerRadius="20" Padding="18">
-                      <StackPanel Spacing="10">
-                        <DockPanel>
-                          <StackPanel DockPanel.Dock="Left" Spacing="4">
-                            <TextBlock Text="{Binding Title}" FontSize="17" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
-                            <TextBlock Text="{Binding AuthorsLine}" Foreground="{StaticResource TextMutedBrush}" />
-                          </StackPanel>
-                          <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top">
-                            <Border Background="{StaticResource AccentSoftBrush}" CornerRadius="999" Padding="10,4">
-                              <TextBlock Text="{Binding FormatBadge}" FontSize="11" Foreground="{StaticResource AccentBrush}" />
-                            </Border>
-                            <Border Background="{StaticResource SurfaceAltBrush}" CornerRadius="999" Padding="10,4">
-                              <TextBlock Text="{Binding SourceBadge}" FontSize="11" Foreground="{StaticResource TextStrongBrush}" />
-                            </Border>
-                          </StackPanel>
-                        </DockPanel>
-                        <TextBlock Text="{Binding MetaLine}" Foreground="{StaticResource TextStrongBrush}" FontSize="13" />
-                        <TextBlock Text="{Binding Summary}" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" MaxHeight="40" TextTrimming="CharacterEllipsis" />
-                      </StackPanel>
-                    </Border>
-                  </DataTemplate>
-                </ListBox.ItemTemplate>
-              </ListBox>
+              </Grid>
             </Grid>
-          </Grid>
-        </Border>
+          </Border>
 
-        <Border Grid.Row="2" Margin="0,14,0,0" Background="{StaticResource SurfaceAltBrush}" BorderBrush="{StaticResource StrokeBrush}" BorderThickness="1" CornerRadius="16" Padding="14">
-          <DockPanel LastChildFill="False">
-            <TextBlock DockPanel.Dock="Left" Text="{Binding StatusMessage}" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" MaxWidth="560" TextTrimming="CharacterEllipsis" />
-            <ProgressBar DockPanel.Dock="Right" Width="140" Height="6" IsIndeterminate="True" IsVisible="{Binding IsBusy}" />
-          </DockPanel>
-        </Border>
-      </Grid>
+          <Grid IsVisible="{Binding IsSearchMode}" ColumnDefinitions="*,340">
+            <Border Grid.Column="0" Classes="panel" Margin="0,0,18,0">
+              <Grid RowDefinitions="Auto,Auto,*">
+                <DockPanel Grid.Row="0" Margin="0,0,0,18">
+                  <StackPanel DockPanel.Dock="Left" Spacing="4">
+                    <TextBlock Text="Targeted search" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
+                    <TextBlock Text="Search mode is for known books, authors, series, genres, years, and languages." FontSize="13" Foreground="{StaticResource TextMutedBrush}" />
+                  </StackPanel>
+                  <Border DockPanel.Dock="Right" Background="{StaticResource SurfaceAltBrush}" CornerRadius="999" Padding="12,6">
+                    <TextBlock Text="{Binding ResultsSummary}" Foreground="{StaticResource TextStrongBrush}" FontWeight="SemiBold" />
+                  </Border>
+                </DockPanel>
 
-      <Border Grid.Column="2" Classes="panel">
+                <Border Grid.Row="1" Background="{StaticResource SurfaceAltBrush}" CornerRadius="18" Padding="18" Margin="0,0,0,18">
+                  <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="*,*">
+                    <TextBox Grid.ColumnSpan="2"
+                             Watermark="Quick query or ISBN. Use * for all or # for entries starting with a digit."
+                             Text="{Binding SearchQuery}" />
+                    <TextBox Grid.Row="1" Margin="0,14,10,0" Watermark="Author" Text="{Binding SearchAuthor}" />
+                    <TextBox Grid.Row="1" Grid.Column="1" Margin="10,14,0,0" Watermark="Book title" Text="{Binding SearchTitle}" />
+                    <Grid Grid.Row="2" Grid.ColumnSpan="2" Margin="0,14,0,0" ColumnDefinitions="*,*,140,140">
+                      <TextBox Margin="0,0,10,0" Watermark="Series" Text="{Binding SearchSeries}" />
+                      <TextBox Grid.Column="1" Margin="10,0,10,0" Watermark="Genre" Text="{Binding SearchGenre}" />
+                      <TextBox Grid.Column="2" Margin="10,0,10,0" Watermark="Year" Text="{Binding SearchYear}" />
+                      <TextBox Grid.Column="3" Margin="10,0,0,0" Watermark="Language" Text="{Binding SearchLanguage}" />
+                    </Grid>
+                    <DockPanel Grid.Row="3" Grid.ColumnSpan="2" Margin="0,16,0,0">
+                      <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="16">
+                        <CheckBox Content="Only local" IsChecked="{Binding SearchOnlyLocal}" />
+                        <CheckBox Content="Exact match" IsChecked="{Binding SearchExactMatch}" />
+                      </StackPanel>
+                      <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="10">
+                        <Button Classes="secondary" Content="Clear" Click="OnClearSearchFiltersClicked" />
+                        <Button Classes="primary" Content="Search" Click="OnSearchClicked" IsEnabled="{Binding CanSearch}" />
+                      </StackPanel>
+                    </DockPanel>
+                  </Grid>
+                </Border>
+
+                <Grid Grid.Row="2" RowDefinitions="Auto,*">
+                  <Border Grid.Row="0" Background="{StaticResource SurfaceStrongBrush}" BorderBrush="{StaticResource StrokeBrush}" BorderThickness="1" CornerRadius="16" Padding="14" Margin="0,0,0,14">
+                    <TextBlock Text="{Binding SearchModeSummary}" TextWrapping="Wrap" Foreground="{StaticResource TextMutedBrush}" />
+                  </Border>
+
+                  <Grid Grid.Row="1">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="480" Spacing="12" IsVisible="{Binding ShowFirstRunState}">
+                      <Border Width="72" Height="72" CornerRadius="24" Background="{StaticResource AccentSoftBrush}" HorizontalAlignment="Center">
+                        <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="L" FontSize="26" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
+                      </Border>
+                      <TextBlock Text="Add a library to begin" FontSize="24" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="{StaticResource TextStrongBrush}" />
+                      <TextBlock Text="Choose or add a library first, then use Search mode for targeted queries." TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource TextMutedBrush}" />
+                      <Button Classes="primary" HorizontalAlignment="Center" Content="Create your first library" Click="OnAddLibraryClicked" />
+                    </StackPanel>
+
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="520" Spacing="12" IsVisible="{Binding ShowSearchPromptState}">
+                      <Border Width="72" Height="72" CornerRadius="24" Background="{StaticResource SurfaceAltBrush}" HorizontalAlignment="Center">
+                        <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="S" FontSize="26" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
+                      </Border>
+                      <TextBlock Text="Target a specific book" FontSize="24" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="{StaticResource TextStrongBrush}" />
+                      <TextBlock Text="Search by title, author, series, genre, year, or language. Format and source stay as metadata in the results." TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource TextMutedBrush}" />
+                    </StackPanel>
+
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="520" Spacing="12" IsVisible="{Binding ShowNoResultsState}">
+                      <Border Width="72" Height="72" CornerRadius="24" Background="{StaticResource SurfaceAltBrush}" HorizontalAlignment="Center">
+                        <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="0" FontSize="26" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
+                      </Border>
+                      <TextBlock Text="Nothing matched that search" FontSize="24" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="{StaticResource TextStrongBrush}" />
+                      <TextBlock Text="Try * for everything, # for entries starting with a digit, or a broader title/author fragment. Leading A/The are ignored for title matching." TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource TextMutedBrush}" />
+                    </StackPanel>
+
+                    <ListBox x:Name="BooksList"
+                             IsVisible="{Binding HasResults}"
+                             ItemsSource="{Binding Results}"
+                             SelectedItem="{Binding SelectedBook}"
+                             SelectionChanged="OnBooksSelectionChanged"
+                             IsEnabled="{Binding CanBrowseResults}"
+                             Background="Transparent"
+                             BorderThickness="0">
+                      <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:BookListItemViewModel">
+                          <Border CornerRadius="20" Padding="18">
+                            <StackPanel Spacing="10">
+                              <DockPanel>
+                                <StackPanel DockPanel.Dock="Left" Spacing="4" MaxWidth="420">
+                                  <TextBlock Text="{Binding Title}" FontSize="17" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" TextWrapping="Wrap" />
+                                  <TextBlock Text="{Binding AuthorsLine}" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
+                                  <TextBlock Text="{Binding SeriesLine}" Foreground="{StaticResource TextMutedBrush}" IsVisible="{Binding HasSeries}" />
+                                </StackPanel>
+                                <WrapPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                  <Border Margin="0,0,8,8" Background="{StaticResource AccentSoftBrush}" CornerRadius="999" Padding="10,4">
+                                    <TextBlock Text="{Binding FormatBadge}" FontSize="11" Foreground="{StaticResource AccentBrush}" />
+                                  </Border>
+                                  <Border Margin="0,0,8,8" Background="{StaticResource SurfaceAltBrush}" CornerRadius="999" Padding="10,4">
+                                    <TextBlock Text="{Binding SourceBadge}" FontSize="11" Foreground="{StaticResource TextStrongBrush}" />
+                                  </Border>
+                                  <Border Classes="availability-pill ready" Margin="0,0,8,8" IsVisible="{Binding ShowLocalReadyState}">
+                                    <TextBlock Text="{Binding LocalAvailabilityLabel}" FontSize="11" Foreground="{StaticResource AccentBrush}" FontWeight="SemiBold" />
+                                  </Border>
+                                  <Border Classes="availability-pill unavailable" Margin="0,0,8,8" IsVisible="{Binding ShowLocalUnavailableState}">
+                                    <TextBlock Text="{Binding LocalAvailabilityLabel}" FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
+                                  </Border>
+                                  <Border Classes="availability-pill warning" Margin="0,0,8,8" IsVisible="{Binding ShowLocalWarningState}">
+                                    <TextBlock Text="{Binding LocalAvailabilityLabel}" FontSize="11" Foreground="#FF8A5A0B" FontWeight="SemiBold" />
+                                  </Border>
+                                </WrapPanel>
+                              </DockPanel>
+                              <WrapPanel Orientation="Horizontal">
+                                <Border Margin="0,0,8,8" Background="{StaticResource SurfaceAltBrush}" CornerRadius="999" Padding="10,4">
+                                  <TextBlock Text="{Binding YearLine}" FontSize="11" Foreground="{StaticResource TextStrongBrush}" />
+                                </Border>
+                                <Border Margin="0,0,8,8" Background="{StaticResource SurfaceAltBrush}" CornerRadius="999" Padding="10,4">
+                                  <TextBlock Text="{Binding LanguageBadge}" FontSize="11" Foreground="{StaticResource TextStrongBrush}" />
+                                </Border>
+                                <Border Margin="0,0,8,8" Background="{StaticResource SurfaceAltBrush}" CornerRadius="999" Padding="10,4" IsVisible="{Binding HasGenre}">
+                                  <TextBlock Text="{Binding GenreLine}" FontSize="11" Foreground="{StaticResource TextStrongBrush}" />
+                                </Border>
+                              </WrapPanel>
+                              <TextBlock Text="{Binding MetaLine}" Foreground="{StaticResource TextStrongBrush}" FontSize="13" />
+                              <TextBlock Text="{Binding Summary}" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" MaxHeight="40" TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+                          </Border>
+                        </DataTemplate>
+                      </ListBox.ItemTemplate>
+                    </ListBox>
+                  </Grid>
+                </Grid>
+              </Grid>
+            </Border>
+
+          <Border Grid.Column="1" Classes="panel">
         <Grid RowDefinitions="Auto,*">
           <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,18">
             <TextBlock Text="Details" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
@@ -389,6 +592,265 @@
           </Grid>
         </Grid>
       </Border>
+          </Grid>
+
+          <Grid IsVisible="{Binding IsDirectoryMode}" RowDefinitions="Auto,*" ColumnDefinitions="300,*,340">
+            <DockPanel Grid.ColumnSpan="3" Margin="0,0,0,14">
+              <StackPanel DockPanel.Dock="Left" Spacing="4">
+                <TextBlock Text="Directory" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
+                <TextBlock Text="Browse the library by author, title, series, or genre instead of typing a targeted search." FontSize="13" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
+              </StackPanel>
+              <Border DockPanel.Dock="Right" Background="{StaticResource SurfaceAltBrush}" CornerRadius="16" Padding="14" MaxWidth="420">
+                <TextBlock Text="{Binding DirectoryModeSummary}" TextWrapping="Wrap" Foreground="{StaticResource TextStrongBrush}" />
+              </Border>
+            </DockPanel>
+
+            <Border Grid.Row="1" Grid.Column="0" Classes="panel" Margin="0,0,18,0">
+              <Grid RowDefinitions="Auto,Auto,Auto,*">
+                <WrapPanel Orientation="Horizontal" ItemHeight="40" Margin="0,0,0,14">
+                  <ToggleButton Classes="directory-tab" Margin="0,0,10,10" IsChecked="{Binding IsDirectoryAuthorsMode, Mode=OneWay}" Click="OnDirectoryAuthorsClicked">
+                    <TextBlock Text="Authors" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
+                  </ToggleButton>
+                  <ToggleButton Classes="directory-tab" Margin="0,0,10,10" IsChecked="{Binding IsDirectoryTitlesMode, Mode=OneWay}" Click="OnDirectoryTitlesClicked">
+                    <TextBlock Text="Titles" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
+                  </ToggleButton>
+                  <ToggleButton Classes="directory-tab" Margin="0,0,10,10" IsChecked="{Binding IsDirectorySeriesMode, Mode=OneWay}" Click="OnDirectorySeriesClicked">
+                    <TextBlock Text="Series" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
+                  </ToggleButton>
+                  <ToggleButton Classes="directory-tab" Margin="0,0,0,10" IsChecked="{Binding IsDirectoryGenresMode, Mode=OneWay}" Click="OnDirectoryGenresClicked">
+                    <TextBlock Text="Genres" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
+                  </ToggleButton>
+                </WrapPanel>
+
+                <ListBox x:Name="DirectoryAlphabetList"
+                         Grid.Row="1"
+                         ItemsSource="{Binding DirectoryAlphabetOptions}"
+                         SelectedItem="{Binding SelectedDirectoryAlphabet}"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         HorizontalAlignment="Stretch"
+                         IsEnabled="{Binding CanBrowseDirectoryEntries}">
+                  <ListBox.ItemsPanel>
+                    <ItemsPanelTemplate>
+                      <WrapPanel />
+                    </ItemsPanelTemplate>
+                  </ListBox.ItemsPanel>
+                  <ListBox.ItemTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding .}" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+
+                <TextBox Grid.Row="2"
+                         Margin="0,14,0,14"
+                         Watermark="{Binding DirectoryFilterWatermark}"
+                         Text="{Binding DirectoryFilterText}" />
+
+                <Grid Grid.Row="3">
+                  <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="220" Spacing="12" IsVisible="{Binding ShowFirstRunState}">
+                    <TextBlock Text="Add a library before browsing its directory." TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource TextMutedBrush}" />
+                    <Button Classes="primary" HorizontalAlignment="Center" Content="Add a library" Click="OnAddLibraryClicked" />
+                  </StackPanel>
+
+                  <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="220" Spacing="12" IsVisible="{Binding ShowDirectoryPromptState}">
+                    <TextBlock Text="Load the directory snapshot to browse the active library." TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource TextMutedBrush}" />
+                    <Button Classes="secondary" HorizontalAlignment="Center" Content="Refresh library" Click="OnRefreshClicked" IsEnabled="{Binding CanRefresh}" />
+                  </StackPanel>
+
+                  <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="220" Spacing="12" IsVisible="{Binding ShowDirectoryEntryEmptyState}">
+                    <TextBlock Text="No directory entries matched that filter." TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource TextMutedBrush}" />
+                  </StackPanel>
+
+                  <ListBox x:Name="DirectoryEntriesList"
+                           IsVisible="{Binding HasDirectoryEntries}"
+                           ItemsSource="{Binding DirectoryEntries}"
+                           SelectedItem="{Binding SelectedDirectoryEntry}"
+                           IsEnabled="{Binding CanBrowseDirectoryEntries}"
+                           Background="Transparent"
+                           BorderThickness="0">
+                    <ListBox.ItemTemplate>
+                      <DataTemplate x:DataType="vm:DirectoryEntryViewModel">
+                        <Border CornerRadius="18" Padding="14">
+                          <DockPanel>
+                            <StackPanel DockPanel.Dock="Left" Spacing="4">
+                              <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" TextWrapping="Wrap" />
+                              <TextBlock Text="{Binding CountLabel}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
+                            </StackPanel>
+                          </DockPanel>
+                        </Border>
+                      </DataTemplate>
+                    </ListBox.ItemTemplate>
+                  </ListBox>
+                </Grid>
+              </Grid>
+            </Border>
+
+            <Border Grid.Row="1" Grid.Column="1" Classes="panel" Margin="0,0,18,0">
+              <Grid RowDefinitions="Auto,*">
+                <DockPanel Grid.Row="0" Margin="0,0,0,18">
+                  <StackPanel DockPanel.Dock="Left" Spacing="4">
+                    <TextBlock Text="Books" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
+                    <TextBlock Text="{Binding DirectoryBooksSummary}" FontSize="13" Foreground="{StaticResource TextMutedBrush}" />
+                  </StackPanel>
+                  <Button DockPanel.Dock="Right" Classes="secondary" Content="Open Search" Click="OnSearchModeClicked" IsEnabled="{Binding HasSelectedLibrary}" />
+                </DockPanel>
+
+                <Grid Grid.Row="1">
+                  <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="360" Spacing="12" IsVisible="{Binding ShowDirectoryBooksEmptyState}">
+                    <Border Width="72" Height="72" CornerRadius="24" Background="{StaticResource SurfaceAltBrush}" HorizontalAlignment="Center">
+                      <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="D" FontSize="26" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
+                    </Border>
+                    <TextBlock Text="No books in this selection" FontSize="24" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="{StaticResource TextStrongBrush}" />
+                    <TextBlock Text="Try a different alphabet bucket, clear the directory filter, or switch to another browse group." TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource TextMutedBrush}" />
+                  </StackPanel>
+
+                  <ListBox x:Name="DirectoryBooksList"
+                           IsVisible="{Binding HasDirectoryBooks}"
+                           ItemsSource="{Binding DirectoryBooks}"
+                           SelectedItem="{Binding SelectedBook}"
+                           SelectionChanged="OnBooksSelectionChanged"
+                           IsEnabled="{Binding CanBrowseDirectoryBooks}"
+                           Background="Transparent"
+                           BorderThickness="0">
+                    <ListBox.ItemTemplate>
+                      <DataTemplate x:DataType="vm:BookListItemViewModel">
+                        <Border CornerRadius="20" Padding="18">
+                          <StackPanel Spacing="10">
+                            <DockPanel>
+                              <StackPanel DockPanel.Dock="Left" Spacing="4" MaxWidth="420">
+                                <TextBlock Text="{Binding Title}" FontSize="17" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" TextWrapping="Wrap" />
+                                <TextBlock Text="{Binding AuthorsLine}" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
+                                <TextBlock Text="{Binding SeriesLine}" Foreground="{StaticResource TextMutedBrush}" IsVisible="{Binding HasSeries}" />
+                              </StackPanel>
+                              <WrapPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                <Border Margin="0,0,8,8" Background="{StaticResource AccentSoftBrush}" CornerRadius="999" Padding="10,4">
+                                  <TextBlock Text="{Binding FormatBadge}" FontSize="11" Foreground="{StaticResource AccentBrush}" />
+                                </Border>
+                                <Border Margin="0,0,8,8" Background="{StaticResource SurfaceAltBrush}" CornerRadius="999" Padding="10,4">
+                                  <TextBlock Text="{Binding SourceBadge}" FontSize="11" Foreground="{StaticResource TextStrongBrush}" />
+                                </Border>
+                                <Border Classes="availability-pill ready" Margin="0,0,8,8" IsVisible="{Binding ShowLocalReadyState}">
+                                  <TextBlock Text="{Binding LocalAvailabilityLabel}" FontSize="11" Foreground="{StaticResource AccentBrush}" FontWeight="SemiBold" />
+                                </Border>
+                                <Border Classes="availability-pill unavailable" Margin="0,0,8,8" IsVisible="{Binding ShowLocalUnavailableState}">
+                                  <TextBlock Text="{Binding LocalAvailabilityLabel}" FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
+                                </Border>
+                                <Border Classes="availability-pill warning" Margin="0,0,8,8" IsVisible="{Binding ShowLocalWarningState}">
+                                  <TextBlock Text="{Binding LocalAvailabilityLabel}" FontSize="11" Foreground="#FF8A5A0B" FontWeight="SemiBold" />
+                                </Border>
+                              </WrapPanel>
+                            </DockPanel>
+                            <WrapPanel Orientation="Horizontal">
+                              <Border Margin="0,0,8,8" Background="{StaticResource SurfaceAltBrush}" CornerRadius="999" Padding="10,4">
+                                <TextBlock Text="{Binding YearLine}" FontSize="11" Foreground="{StaticResource TextStrongBrush}" />
+                              </Border>
+                              <Border Margin="0,0,8,8" Background="{StaticResource SurfaceAltBrush}" CornerRadius="999" Padding="10,4">
+                                <TextBlock Text="{Binding LanguageBadge}" FontSize="11" Foreground="{StaticResource TextStrongBrush}" />
+                              </Border>
+                              <Border Margin="0,0,8,8" Background="{StaticResource SurfaceAltBrush}" CornerRadius="999" Padding="10,4" IsVisible="{Binding HasGenre}">
+                                <TextBlock Text="{Binding GenreLine}" FontSize="11" Foreground="{StaticResource TextStrongBrush}" />
+                              </Border>
+                            </WrapPanel>
+                            <TextBlock Text="{Binding MetaLine}" Foreground="{StaticResource TextStrongBrush}" FontSize="13" />
+                            <TextBlock Text="{Binding Summary}" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" MaxHeight="40" TextTrimming="CharacterEllipsis" />
+                          </StackPanel>
+                        </Border>
+                      </DataTemplate>
+                    </ListBox.ItemTemplate>
+                  </ListBox>
+                </Grid>
+              </Grid>
+            </Border>
+
+            <Border Grid.Row="1" Grid.Column="2" Classes="panel">
+              <Grid RowDefinitions="Auto,*">
+                <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,18">
+                  <TextBlock Text="Details" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
+                  <TextBlock Text="Selected title metadata, source context, and available actions." FontSize="13" Foreground="{StaticResource TextMutedBrush}" />
+                </StackPanel>
+
+                <Grid Grid.Row="1">
+                  <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="260" Spacing="12" IsVisible="{Binding ShowDetailsPlaceholderState}">
+                    <Border Width="64" Height="64" CornerRadius="22" Background="{StaticResource SurfaceAltBrush}" HorizontalAlignment="Center">
+                      <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="B" FontSize="24" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
+                    </Border>
+                    <TextBlock Text="Select a title" FontSize="22" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="{StaticResource TextStrongBrush}" />
+                    <TextBlock Text="Choose a browse group on the left, then a book in the center to inspect details and available actions." TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource TextMutedBrush}" />
+                  </StackPanel>
+
+                  <ScrollViewer IsVisible="{Binding HasSelectedBook}" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Spacing="18">
+                      <Border Background="{StaticResource SurfaceAltBrush}" CornerRadius="18" Padding="18">
+                        <StackPanel Spacing="10">
+                          <Border Background="{StaticResource AccentSoftBrush}" CornerRadius="999" Padding="10,4" HorizontalAlignment="Left">
+                            <TextBlock Text="{Binding SelectedBookDetails.ProviderName}" Foreground="{StaticResource AccentBrush}" />
+                          </Border>
+                          <TextBlock Text="{Binding SelectedBookDetails.Title}" FontSize="24" FontWeight="SemiBold" TextWrapping="Wrap" Foreground="{StaticResource TextStrongBrush}" />
+                          <TextBlock Text="{Binding SelectedBookDetails.AuthorsLine}" FontSize="14" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
+                          <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,6,0,0">
+                            <Button Classes="primary" Content="{Binding SelectedBookDetails.PrimaryActionLabel}" IsEnabled="{Binding SelectedBookDetails.CanPerformPrimaryAction}" Click="OnPrimaryBookActionClicked" />
+                            <Button Classes="secondary" Content="{Binding SelectedBookDetails.SecondaryActionLabel}" IsEnabled="{Binding SelectedBookDetails.CanCopyLink}" Click="OnCopyLinkClicked" />
+                          </StackPanel>
+                        </StackPanel>
+                      </Border>
+
+                      <Border Background="{StaticResource SurfaceStrongBrush}" BorderBrush="{StaticResource StrokeBrush}" BorderThickness="1" CornerRadius="18" Padding="18">
+                        <StackPanel Spacing="10">
+                          <TextBlock Text="About this book" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
+                          <TextBlock Text="{Binding SelectedBookDetails.Description}" TextWrapping="Wrap" Foreground="{StaticResource TextMutedBrush}" />
+                        </StackPanel>
+                      </Border>
+
+                      <Border Background="{StaticResource SurfaceStrongBrush}" BorderBrush="{StaticResource StrokeBrush}" BorderThickness="1" CornerRadius="18" Padding="18">
+                        <StackPanel Spacing="14">
+                          <TextBlock Text="Metadata" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
+                          <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
+                            <TextBlock Text="Formats" Foreground="{StaticResource TextMutedBrush}" />
+                            <TextBlock Grid.Column="1" Margin="12,0,0,10" Text="{Binding SelectedBookDetails.FormatsLine}" TextWrapping="Wrap" Foreground="{StaticResource TextStrongBrush}" />
+                            <TextBlock Grid.Row="1" Margin="0,0,0,10" Text="Publisher" Foreground="{StaticResource TextMutedBrush}" />
+                            <TextBlock Grid.Row="1" Grid.Column="1" Margin="12,0,0,10" Text="{Binding SelectedBookDetails.PublisherLine}" TextWrapping="Wrap" Foreground="{StaticResource TextStrongBrush}" />
+                            <TextBlock Grid.Row="2" Margin="0,0,0,10" Text="Year" Foreground="{StaticResource TextMutedBrush}" />
+                            <TextBlock Grid.Row="2" Grid.Column="1" Margin="12,0,0,10" Text="{Binding SelectedBookDetails.YearLine}" Foreground="{StaticResource TextStrongBrush}" />
+                            <TextBlock Grid.Row="3" Margin="0,0,0,10" Text="Language" Foreground="{StaticResource TextMutedBrush}" />
+                            <TextBlock Grid.Row="3" Grid.Column="1" Margin="12,0,0,10" Text="{Binding SelectedBookDetails.LanguageLine}" Foreground="{StaticResource TextStrongBrush}" />
+                            <TextBlock Grid.Row="4" Margin="0,0,0,10" Text="Subjects" Foreground="{StaticResource TextMutedBrush}" />
+                            <TextBlock Grid.Row="4" Grid.Column="1" Margin="12,0,0,10" Text="{Binding SelectedBookDetails.SubjectsLine}" TextWrapping="Wrap" Foreground="{StaticResource TextStrongBrush}" />
+                            <TextBlock Grid.Row="5" Text="ISBN" Foreground="{StaticResource TextMutedBrush}" />
+                            <TextBlock Grid.Row="5" Grid.Column="1" Margin="12,0,0,0" Text="{Binding SelectedBookDetails.IsbnLine}" TextWrapping="Wrap" Foreground="{StaticResource TextStrongBrush}" />
+                          </Grid>
+                        </StackPanel>
+                      </Border>
+
+                      <Border Background="{StaticResource SurfaceStrongBrush}" BorderBrush="{StaticResource StrokeBrush}" BorderThickness="1" CornerRadius="18" Padding="18">
+                        <StackPanel Spacing="14">
+                          <TextBlock Text="Source" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
+                          <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto">
+                            <TextBlock Text="Provider" Foreground="{StaticResource TextMutedBrush}" />
+                            <TextBlock Grid.Column="1" Margin="12,0,0,10" Text="{Binding SelectedBookDetails.ProviderId}" Foreground="{StaticResource TextStrongBrush}" />
+                            <TextBlock Grid.Row="1" Margin="0,0,0,10" Text="Catalog ID" Foreground="{StaticResource TextMutedBrush}" />
+                            <TextBlock Grid.Row="1" Grid.Column="1" Margin="12,0,0,10" Text="{Binding SelectedBookDetails.SourceId}" TextWrapping="Wrap" Foreground="{StaticResource TextStrongBrush}" />
+                            <TextBlock Grid.Row="2" Text="Best link" Foreground="{StaticResource TextMutedBrush}" />
+                            <TextBlock Grid.Row="2" Grid.Column="1" Margin="12,0,0,0" Text="{Binding SelectedBookDetails.PreferredLink}" TextWrapping="Wrap" Foreground="{StaticResource TextStrongBrush}" />
+                          </Grid>
+                        </StackPanel>
+                      </Border>
+                    </StackPanel>
+                  </ScrollViewer>
+                </Grid>
+              </Grid>
+            </Border>
+          </Grid>
+        </Grid>
+
+        <Border Grid.Row="2" Margin="0,14,0,0" Background="{StaticResource SurfaceAltBrush}" BorderBrush="{StaticResource StrokeBrush}" BorderThickness="1" CornerRadius="16" Padding="14">
+          <DockPanel LastChildFill="False">
+            <TextBlock DockPanel.Dock="Left" Text="{Binding StatusMessage}" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" MaxWidth="760" TextTrimming="CharacterEllipsis" />
+            <ProgressBar DockPanel.Dock="Right" Width="140" Height="6" IsIndeterminate="True" IsVisible="{Binding IsBusy}" />
+          </DockPanel>
+        </Border>
+      </Grid>
+
     </Grid>
 
     <Border Grid.Row="2" Height="10" Background="#FFF4F1EA" />
