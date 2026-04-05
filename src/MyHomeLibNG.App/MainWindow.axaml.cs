@@ -42,6 +42,7 @@ public partial class MainWindow : Window
 
     private async void OnSearchClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
+        _viewModel.SetMode(AppMode.Search);
         await _viewModel.SearchAsync();
     }
 
@@ -123,6 +124,47 @@ public partial class MainWindow : Window
             return;
         }
 
+        _viewModel.SetMode(AppMode.Search);
         await _viewModel.SearchAsync();
+    }
+
+    private void OnLibrariesModeClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        _viewModel.SetMode(AppMode.Libraries);
+    }
+
+    private void OnSearchModeClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        _viewModel.SetMode(AppMode.Search);
+    }
+
+    private async void OnDirectoryModeClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        await _viewModel.OpenDirectoryModeAsync();
+    }
+
+    private void OnClearSearchFiltersClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        _viewModel.ResetStructuredSearch();
+    }
+
+    private void OnDirectoryAuthorsClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        _viewModel.SetDirectoryBrowseMode(DirectoryBrowseMode.Authors);
+    }
+
+    private void OnDirectoryTitlesClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        _viewModel.SetDirectoryBrowseMode(DirectoryBrowseMode.Titles);
+    }
+
+    private void OnDirectorySeriesClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        _viewModel.SetDirectoryBrowseMode(DirectoryBrowseMode.Series);
+    }
+
+    private void OnDirectoryGenresClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        _viewModel.SetDirectoryBrowseMode(DirectoryBrowseMode.Genres);
     }
 }
