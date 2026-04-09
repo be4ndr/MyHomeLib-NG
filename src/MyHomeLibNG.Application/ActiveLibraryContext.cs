@@ -56,6 +56,18 @@ public sealed class ActiveLibraryContext : IActiveLibraryContext
         return Task.CompletedTask;
     }
 
+    public Task ClearAsync(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        lock (_sync)
+        {
+            _current = null;
+        }
+
+        return Task.CompletedTask;
+    }
+
     private void SetCurrent(LibraryProfile profile)
     {
         lock (_sync)

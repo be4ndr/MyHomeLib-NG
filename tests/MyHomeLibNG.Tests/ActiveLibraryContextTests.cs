@@ -85,6 +85,12 @@ public sealed class ActiveLibraryContextTests
             return Task.FromResult(profile.Id);
         }
 
+        public Task DeleteAsync(long libraryId, CancellationToken cancellationToken = default)
+        {
+            _profiles.Remove(libraryId);
+            return Task.CompletedTask;
+        }
+
         public void Remove(long libraryId)
         {
             _profiles.Remove(libraryId);

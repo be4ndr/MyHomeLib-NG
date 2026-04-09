@@ -14,4 +14,7 @@ public sealed class LibraryProfilesService
 
     public Task<IReadOnlyList<LibraryProfile>> GetAllAsync(CancellationToken cancellationToken = default)
         => _libraryRepository.GetLibraryProfilesAsync(cancellationToken);
+
+    public Task RemoveAsync(long libraryId, CancellationToken cancellationToken = default)
+        => _libraryRepository.DeleteAsync(libraryId, cancellationToken);
 }

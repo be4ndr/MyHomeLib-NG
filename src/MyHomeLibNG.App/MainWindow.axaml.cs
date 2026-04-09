@@ -68,6 +68,23 @@ public partial class MainWindow : Window
         await _viewModel.AddLibraryAsync(profile);
     }
 
+    private async void OnDeleteLibraryClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (sender is not Button { DataContext: LibraryProfileItemViewModel library })
+        {
+            return;
+        }
+
+        var dialog = new DeleteLibraryDialog(library);
+        var shouldDelete = await dialog.ShowDialog<bool>(this);
+        if (!shouldDelete)
+        {
+            return;
+        }
+
+        await _viewModel.DeleteLibraryAsync(library);
+    }
+
     private async void OnPrimaryBookActionClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         try

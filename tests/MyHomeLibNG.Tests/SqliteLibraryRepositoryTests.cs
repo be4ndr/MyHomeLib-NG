@@ -88,6 +88,41 @@ public sealed class SqliteLibraryRepositoryTests
     }
 
     [Fact]
+    public async Task DeleteAsync_RemovesLibraryProfile()
+    {
+        var database = await CreateDatabaseAsync();
+
+        try
+        {
+            var repository = new SqliteLibraryRepository(database.ConnectionString);
+            var libraryId = await repository.AddAsync(new LibraryProfile
+            {
+                Name = "Delete me",
+                ProviderId = BookProviderIds.ProjectGutenberg,
+                LibraryType = LibraryType.Online,
+                OnlineSource = new OnlineLibrarySourceSettings
+                {
+                    ApiBaseUrl = "https://example.test/api",
+                    SearchEndpoint = "https://example.test/api/search"
+                },
+                CreatedAtUtc = DateTimeOffset.UtcNow
+            });
+
+            await repository.DeleteAsync(libraryId);
+
+            var profiles = await repository.GetLibraryProfilesAsync();
+            var loaded = await repository.GetByIdAsync(libraryId);
+
+            Assert.DoesNotContain(profiles, profile => profile.Id == libraryId);
+            Assert.Null(loaded);
+        }
+        finally
+        {
+            database.Dispose();
+        }
+    }
+
+    [Fact]
     public async Task ResolveAsync_ReturnsOnlineApiStructure()
     {
         var resolver = new LibrarySourceResolver(CreateOnlineEnvironment());

@@ -18,6 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\MyHomeLibNG.App\MyHomeLibNG.App.csproj" />
     <ProjectReference Include="..\..\src\MyHomeLibNG.Application\MyHomeLibNG.Application.csproj" />
     <ProjectReference Include="..\..\src\MyHomeLibNG.Core\MyHomeLibNG.Core.csproj" />
     <ProjectReference Include="..\..\src\MyHomeLibNG.Infrastructure\MyHomeLibNG.Infrastructure.csproj" />

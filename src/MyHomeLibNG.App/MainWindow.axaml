@@ -277,7 +277,7 @@
               <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="vm:LibraryProfileItemViewModel">
                   <Border CornerRadius="18" Padding="16">
-                    <Grid ColumnDefinitions="Auto,*">
+                    <Grid ColumnDefinitions="Auto,*,Auto">
                       <Border Width="42" Height="42" CornerRadius="14" Background="{StaticResource AccentSoftBrush}">
                         <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding AccentGlyph}" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
                       </Border>
@@ -291,6 +291,12 @@
                         <TextBlock Text="{Binding ProviderLabel}" Foreground="{StaticResource TextStrongBrush}" />
                         <TextBlock Text="{Binding Summary}" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" MaxHeight="36" TextTrimming="CharacterEllipsis" />
                       </StackPanel>
+                      <Button Grid.Column="2"
+                              Margin="14,0,0,0"
+                              Classes="secondary"
+                              VerticalAlignment="Top"
+                              Content="Delete"
+                              Click="OnDeleteLibraryClicked" />
                     </Grid>
                   </Border>
                 </DataTemplate>

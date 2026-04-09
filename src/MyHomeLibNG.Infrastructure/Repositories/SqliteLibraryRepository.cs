@@ -107,6 +107,20 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
         return Convert.ToInt64(id);
     }
 
+    public async Task DeleteAsync(long libraryId, CancellationToken cancellationToken = default)
+    {
+        await using var connection = new SqliteConnection(_connectionString);
+        await connection.OpenAsync(cancellationToken);
+
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+                              DELETE FROM LibraryProfiles
+                              WHERE Id = $id;
+                              """;
+        command.Parameters.AddWithValue("$id", libraryId);
+        await command.ExecuteNonQueryAsync(cancellationToken);
+    }
+
     private static LibraryProfile ReadProfile(SqliteDataReader reader)
     {
         var record = new ProfileRecord(
