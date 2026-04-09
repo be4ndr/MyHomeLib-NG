@@ -1,15 +1,27 @@
+using System.ComponentModel;
 using System.Diagnostics;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Microsoft.Extensions.DependencyInjection;
 using MyHomeLibNG.App.ViewModels;
+using MyHomeLibNG.App.Views;
 using MyHomeLibNG.Core.Models;
 
 namespace MyHomeLibNG.App;
 
 public partial class MainWindow : Window
 {
+    public static readonly DirectProperty<MainWindow, Control?> CurrentViewProperty =
+        AvaloniaProperty.RegisterDirect<MainWindow, Control?>(
+            nameof(CurrentView),
+            window => window.CurrentView);
+
     private readonly MainWindowViewModel _viewModel;
+    private readonly LibrariesView _librariesView = new();
+    private readonly SearchView _searchView = new();
+    private readonly DirectoryView _directoryView = new();
+    private Control? _currentView;
 
     public MainWindow()
         : this(((App)Avalonia.Application.Current!).Services.GetRequiredService<MainWindowViewModel>())
@@ -21,42 +33,45 @@ public partial class MainWindow : Window
         _viewModel = viewModel;
         InitializeComponent();
         DataContext = _viewModel;
+        _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+        Closed += OnClosed;
         Opened += OnOpened;
+        UpdateCurrentView();
     }
 
-    private async void OnOpened(object? sender, EventArgs e)
+    public Control? CurrentView
     {
-        Opened -= OnOpened;
-        await _viewModel.InitializeAsync();
+        get => _currentView;
+        private set => SetAndRaise(CurrentViewProperty, ref _currentView, value);
     }
 
-    private async void OnLibrariesSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    internal async Task HandleLibrariesSelectionChangedAsync()
     {
         await _viewModel.OnSelectedLibraryChangedAsync();
     }
 
-    private async void OnBooksSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    internal async Task HandleBooksSelectionChangedAsync()
     {
         await _viewModel.OnSelectedBookChangedAsync();
     }
 
-    private async void OnSearchClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    internal async Task HandleSearchClickedAsync()
     {
         _viewModel.SetMode(AppMode.Search);
         await _viewModel.SearchAsync();
     }
 
-    private async void OnRefreshClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    internal async Task HandleRefreshClickedAsync()
     {
         await _viewModel.RefreshAsync();
     }
 
-    private void OnSettingsClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    internal void HandleSettingsClicked()
     {
         _viewModel.ReportActionSuccess("Settings will land in a dedicated preferences screen in the next iteration.");
     }
 
-    private async void OnAddLibraryClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    internal async Task HandleAddLibraryClickedAsync()
     {
         var dialog = new AddLibraryWindow();
         var profile = await dialog.ShowDialog<LibraryProfile?>(this);
@@ -68,7 +83,7 @@ public partial class MainWindow : Window
         await _viewModel.AddLibraryAsync(profile);
     }
 
-    private async void OnPrimaryBookActionClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    internal async Task HandlePrimaryBookActionClickedAsync()
     {
         try
         {
@@ -97,7 +112,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private async void OnCopyLinkClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    internal async Task HandleCopyLinkClickedAsync()
     {
         var link = _viewModel.GetPreferredLink();
         if (string.IsNullOrWhiteSpace(link))
@@ -117,6 +132,117 @@ public partial class MainWindow : Window
         _viewModel.ReportActionSuccess("Copied the best available book link to the clipboard.");
     }
 
+    internal void HandleLibrariesModeClicked()
+    {
+        _viewModel.SetMode(AppMode.Libraries);
+    }
+
+    internal void HandleSearchModeClicked()
+    {
+        _viewModel.SetMode(AppMode.Search);
+    }
+
+    internal async Task HandleDirectoryModeClickedAsync()
+    {
+        await _viewModel.OpenDirectoryModeAsync();
+    }
+
+    internal void HandleClearSearchFiltersClicked()
+    {
+        _viewModel.ResetStructuredSearch();
+    }
+
+    internal void HandleDirectoryAuthorsClicked()
+    {
+        _viewModel.SetDirectoryBrowseMode(DirectoryBrowseMode.Authors);
+    }
+
+    internal void HandleDirectoryTitlesClicked()
+    {
+        _viewModel.SetDirectoryBrowseMode(DirectoryBrowseMode.Titles);
+    }
+
+    internal void HandleDirectorySeriesClicked()
+    {
+        _viewModel.SetDirectoryBrowseMode(DirectoryBrowseMode.Series);
+    }
+
+    internal void HandleDirectoryGenresClicked()
+    {
+        _viewModel.SetDirectoryBrowseMode(DirectoryBrowseMode.Genres);
+    }
+
+    private async void OnOpened(object? sender, EventArgs e)
+    {
+        Opened -= OnOpened;
+        await _viewModel.InitializeAsync();
+    }
+
+    private void OnClosed(object? sender, EventArgs e)
+    {
+        Closed -= OnClosed;
+        _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
+    }
+
+    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (string.IsNullOrEmpty(e.PropertyName) ||
+            e.PropertyName == nameof(MainWindowViewModel.CurrentMode))
+        {
+            UpdateCurrentView();
+        }
+    }
+
+    private void UpdateCurrentView()
+    {
+        CurrentView = _viewModel.CurrentMode switch
+        {
+            AppMode.Search => _searchView,
+            AppMode.Directory => _directoryView,
+            _ => _librariesView
+        };
+    }
+
+    private async void OnLibrariesSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        await HandleLibrariesSelectionChangedAsync();
+    }
+
+    private async void OnBooksSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        await HandleBooksSelectionChangedAsync();
+    }
+
+    private async void OnSearchClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        await HandleSearchClickedAsync();
+    }
+
+    private async void OnRefreshClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        await HandleRefreshClickedAsync();
+    }
+
+    private void OnSettingsClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        HandleSettingsClicked();
+    }
+
+    private async void OnAddLibraryClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        await HandleAddLibraryClickedAsync();
+    }
+
+    private async void OnPrimaryBookActionClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        await HandlePrimaryBookActionClickedAsync();
+    }
+
+    private async void OnCopyLinkClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        await HandleCopyLinkClickedAsync();
+    }
+
     private async void OnSearchBoxKeyDown(object? sender, KeyEventArgs e)
     {
         if (e.Key != Key.Enter)
@@ -124,47 +250,46 @@ public partial class MainWindow : Window
             return;
         }
 
-        _viewModel.SetMode(AppMode.Search);
-        await _viewModel.SearchAsync();
+        await HandleSearchClickedAsync();
     }
 
     private void OnLibrariesModeClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
-        _viewModel.SetMode(AppMode.Libraries);
+        HandleLibrariesModeClicked();
     }
 
     private void OnSearchModeClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
-        _viewModel.SetMode(AppMode.Search);
+        HandleSearchModeClicked();
     }
 
     private async void OnDirectoryModeClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
-        await _viewModel.OpenDirectoryModeAsync();
+        await HandleDirectoryModeClickedAsync();
     }
 
     private void OnClearSearchFiltersClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
-        _viewModel.ResetStructuredSearch();
+        HandleClearSearchFiltersClicked();
     }
 
     private void OnDirectoryAuthorsClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
-        _viewModel.SetDirectoryBrowseMode(DirectoryBrowseMode.Authors);
+        HandleDirectoryAuthorsClicked();
     }
 
     private void OnDirectoryTitlesClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
-        _viewModel.SetDirectoryBrowseMode(DirectoryBrowseMode.Titles);
+        HandleDirectoryTitlesClicked();
     }
 
     private void OnDirectorySeriesClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
-        _viewModel.SetDirectoryBrowseMode(DirectoryBrowseMode.Series);
+        HandleDirectorySeriesClicked();
     }
 
     private void OnDirectoryGenresClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
-        _viewModel.SetDirectoryBrowseMode(DirectoryBrowseMode.Genres);
+        HandleDirectoryGenresClicked();
     }
 }
