@@ -21,5 +21,5 @@ public sealed class DirectoryEntryViewModel
     public string NormalizedValue { get; }
     public string AlphabetKey { get; }
     public int Count { get; }
-    public string CountLabel => $"{Count} book{(Count == 1 ? string.Empty : "s")}";
+    public string CountLabel => Count == 1 ? "1 book" : $"{Count} books";
 }
