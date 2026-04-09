@@ -169,7 +169,7 @@
           </Border>
           <StackPanel Spacing="2">
             <TextBlock Text="MyHomeLib NG" FontSize="21" FontWeight="SemiBold" Foreground="White" />
-            <TextBlock Text="Search-first cataloging for local and online libraries" FontSize="12" Foreground="#CDE1E1" />
+            <TextBlock Text="Search and browse your libraries" FontSize="12" Foreground="#CDE1E1" />
           </StackPanel>
         </StackPanel>
 
@@ -183,7 +183,7 @@
                      x:Name="SearchBox"
                      Background="Transparent"
                      BorderThickness="0"
-                     Watermark="Search titles, authors, ISBN, or keywords"
+                     Watermark="Search titles, authors, or ISBN"
                      Text="{Binding SearchQuery}"
                      IsEnabled="{Binding CanSearch}"
                      KeyDown="OnSearchBoxKeyDown" />
@@ -211,8 +211,8 @@
       <Border Grid.Column="0" Classes="panel" Padding="14">
         <Grid RowDefinitions="Auto,*,Auto">
           <StackPanel Spacing="4">
-            <TextBlock Text="Modes" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
-            <TextBlock Text="Workspace" FontSize="13" Foreground="{StaticResource TextMutedBrush}" />
+            <TextBlock Text="" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
+            <TextBlock Text="" FontSize="13" Foreground="{StaticResource TextMutedBrush}" />
           </StackPanel>
 
           <StackPanel Grid.Row="1" Margin="0,18,0,18" Spacing="10">
@@ -223,7 +223,7 @@
               <TextBlock Text="Search" HorizontalAlignment="Center" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
             </ToggleButton>
             <ToggleButton Classes="mode-nav" IsChecked="{Binding IsDirectoryMode, Mode=OneWay}" Click="OnDirectoryModeClicked">
-              <TextBlock Text="Directory" HorizontalAlignment="Center" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
+              <TextBlock Text="Browse" HorizontalAlignment="Center" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
             </ToggleButton>
           </StackPanel>
 
@@ -243,26 +243,26 @@
             <TextBlock Text="{Binding SidebarCaption}" FontSize="13" Foreground="{StaticResource TextMutedBrush}" />
           </StackPanel>
 
-          <Button Grid.Row="1" Margin="0,18,0,18" Classes="primary" Content="Add a library" Click="OnAddLibraryClicked" />
+          <Button Grid.Row="1" Margin="0,18,0,18" Classes="primary" Content="Add library" Click="OnAddLibraryClicked" />
 
           <Grid Grid.Row="2">
             <StackPanel Spacing="14" IsVisible="{Binding ShowFirstRunState}">
               <Border Background="{StaticResource SurfaceAltBrush}" CornerRadius="18" Padding="18">
                 <StackPanel Spacing="10">
-                  <TextBlock Text="Add a library to begin" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
-                  <TextBlock Text="Start with an offline INPX catalog or a preset online source. Your active library will live here with quick context and status." TextWrapping="Wrap" Foreground="{StaticResource TextMutedBrush}" />
+                  <TextBlock Text="Select a library to begin" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
+                  <TextBlock Text="Add an offline library or online source." TextWrapping="Wrap" Foreground="{StaticResource TextMutedBrush}" />
                 </StackPanel>
               </Border>
               <Border Background="{StaticResource SurfaceStrongBrush}" BorderBrush="{StaticResource StrokeBrush}" BorderThickness="1" CornerRadius="18" Padding="16">
                 <StackPanel Spacing="8">
                   <TextBlock Text="Offline library" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
-                  <TextBlock Text="Use a local INPX file and archive folder when you want fast search and local opening." TextWrapping="Wrap" Foreground="{StaticResource TextMutedBrush}" />
+                  <TextBlock Text="Use a local INPX file and archive folder." TextWrapping="Wrap" Foreground="{StaticResource TextMutedBrush}" />
                 </StackPanel>
               </Border>
               <Border Background="{StaticResource SurfaceStrongBrush}" BorderBrush="{StaticResource StrokeBrush}" BorderThickness="1" CornerRadius="18" Padding="16">
                 <StackPanel Spacing="8">
                   <TextBlock Text="Online source" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
-                  <TextBlock Text="Preset public catalogs such as Project Gutenberg, Open Library, or Google Books are ready to add." TextWrapping="Wrap" Foreground="{StaticResource TextMutedBrush}" />
+                  <TextBlock Text="Add a preset online source." TextWrapping="Wrap" Foreground="{StaticResource TextMutedBrush}" />
                 </StackPanel>
               </Border>
             </StackPanel>
@@ -333,7 +333,7 @@
                 Margin="0,0,0,14"
                 IsVisible="{Binding HasError}">
           <DockPanel>
-            <TextBlock DockPanel.Dock="Left" Text="Notice" FontWeight="SemiBold" Foreground="#FF8A5A0B" Margin="0,0,12,0" />
+            <TextBlock DockPanel.Dock="Left" Text="Status" FontWeight="SemiBold" Foreground="#FF8A5A0B" Margin="0,0,12,0" />
             <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" Foreground="#FF6F4A12" />
           </DockPanel>
         </Border>

@@ -4,8 +4,8 @@
   <Grid RowDefinitions="Auto,*" ColumnDefinitions="300,*,340">
     <DockPanel Grid.ColumnSpan="3" Margin="0,0,0,14">
       <StackPanel DockPanel.Dock="Left" Spacing="4">
-        <TextBlock Text="Directory" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
-        <TextBlock Text="Browse the library by author, title, series, or genre instead of typing a targeted search." FontSize="13" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
+        <TextBlock Text="Browse" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
+        <TextBlock Text="" FontSize="13" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
       </StackPanel>
       <Border DockPanel.Dock="Right" Background="{StaticResource SurfaceAltBrush}" CornerRadius="16" Padding="14" MaxWidth="420">
         <TextBlock Text="{Binding DirectoryModeSummary}" TextWrapping="Wrap" Foreground="{StaticResource TextStrongBrush}" />
@@ -56,17 +56,17 @@
 
         <Grid Grid.Row="3">
           <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="220" Spacing="12" IsVisible="{Binding ShowFirstRunState}">
-            <TextBlock Text="Add a library before browsing its directory." TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource TextMutedBrush}" />
-            <Button Classes="primary" HorizontalAlignment="Center" Content="Add a library" Click="OnAddLibraryClicked" />
+            <TextBlock Text="Select a library to begin." TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource TextMutedBrush}" />
+            <Button Classes="primary" HorizontalAlignment="Center" Content="Add library" Click="OnAddLibraryClicked" />
           </StackPanel>
 
           <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="220" Spacing="12" IsVisible="{Binding ShowDirectoryPromptState}">
-            <TextBlock Text="Load the directory snapshot to browse the active library." TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource TextMutedBrush}" />
-            <Button Classes="secondary" HorizontalAlignment="Center" Content="Refresh library" Click="OnRefreshClicked" IsEnabled="{Binding CanRefresh}" />
+            <TextBlock Text="Refresh to load browse data." TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource TextMutedBrush}" />
+            <Button Classes="secondary" HorizontalAlignment="Center" Content="Refresh" Click="OnRefreshClicked" IsEnabled="{Binding CanRefresh}" />
           </StackPanel>
 
           <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="220" Spacing="12" IsVisible="{Binding ShowDirectoryEntryEmptyState}">
-            <TextBlock Text="No directory entries matched that filter." TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource TextMutedBrush}" />
+            <TextBlock Text="No results found" TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource TextMutedBrush}" />
           </StackPanel>
 
           <ListBox x:Name="DirectoryEntriesList"
@@ -100,7 +100,7 @@
             <TextBlock Text="Books" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
             <TextBlock Text="{Binding DirectoryBooksSummary}" FontSize="13" Foreground="{StaticResource TextMutedBrush}" />
           </StackPanel>
-          <Button DockPanel.Dock="Right" Classes="secondary" Content="Open Search" Click="OnSearchModeClicked" IsEnabled="{Binding HasSelectedLibrary}" />
+          <Button DockPanel.Dock="Right" Classes="secondary" Content="Search" Click="OnSearchModeClicked" IsEnabled="{Binding HasSelectedLibrary}" />
         </DockPanel>
 
         <Grid Grid.Row="1">
@@ -109,7 +109,7 @@
               <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="D" FontSize="26" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
             </Border>
             <TextBlock Text="No books in this selection" FontSize="24" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="{StaticResource TextStrongBrush}" />
-            <TextBlock Text="Try a different alphabet bucket, clear the directory filter, or switch to another browse group." TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource TextMutedBrush}" />
+            <TextBlock Text="Try another filter." TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource TextMutedBrush}" />
           </StackPanel>
 
           <ListBox x:Name="DirectoryBooksList"
@@ -174,7 +174,7 @@
       <Grid RowDefinitions="Auto,*">
         <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,18">
           <TextBlock Text="Details" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
-          <TextBlock Text="Selected title metadata, source context, and available actions." FontSize="13" Foreground="{StaticResource TextMutedBrush}" />
+          <TextBlock Text="Selected book details and actions." FontSize="13" Foreground="{StaticResource TextMutedBrush}" />
         </StackPanel>
 
         <Grid Grid.Row="1">
@@ -182,8 +182,8 @@
             <Border Width="64" Height="64" CornerRadius="22" Background="{StaticResource SurfaceAltBrush}" HorizontalAlignment="Center">
               <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="B" FontSize="24" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
             </Border>
-            <TextBlock Text="Select a title" FontSize="22" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="{StaticResource TextStrongBrush}" />
-            <TextBlock Text="Choose a browse group on the left, then a book in the center to inspect details and available actions." TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource TextMutedBrush}" />
+            <TextBlock Text="Select a book" FontSize="22" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="{StaticResource TextStrongBrush}" />
+            <TextBlock Text="Select a book to view details." TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource TextMutedBrush}" />
           </StackPanel>
 
           <ScrollViewer IsVisible="{Binding HasSelectedBook}" HorizontalScrollBarVisibility="Disabled">
@@ -204,7 +204,7 @@
 
               <Border Background="{StaticResource SurfaceStrongBrush}" BorderBrush="{StaticResource StrokeBrush}" BorderThickness="1" CornerRadius="18" Padding="18">
                 <StackPanel Spacing="10">
-                  <TextBlock Text="About this book" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
+                  <TextBlock Text="Summary" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
                   <TextBlock Text="{Binding SelectedBookDetails.Description}" TextWrapping="Wrap" Foreground="{StaticResource TextMutedBrush}" />
                 </StackPanel>
               </Border>
@@ -235,7 +235,7 @@
                   <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto">
                     <TextBlock Text="Provider" Foreground="{StaticResource TextMutedBrush}" />
                     <TextBlock Grid.Column="1" Margin="12,0,0,10" Text="{Binding SelectedBookDetails.ProviderId}" Foreground="{StaticResource TextStrongBrush}" />
-                    <TextBlock Grid.Row="1" Margin="0,0,0,10" Text="Catalog ID" Foreground="{StaticResource TextMutedBrush}" />
+                    <TextBlock Grid.Row="1" Margin="0,0,0,10" Text="Source ID" Foreground="{StaticResource TextMutedBrush}" />
                     <TextBlock Grid.Row="1" Grid.Column="1" Margin="12,0,0,10" Text="{Binding SelectedBookDetails.SourceId}" TextWrapping="Wrap" Foreground="{StaticResource TextStrongBrush}" />
                     <TextBlock Grid.Row="2" Text="Best link" Foreground="{StaticResource TextMutedBrush}" />
                     <TextBlock Grid.Row="2" Grid.Column="1" Margin="12,0,0,0" Text="{Binding SelectedBookDetails.PreferredLink}" TextWrapping="Wrap" Foreground="{StaticResource TextStrongBrush}" />
