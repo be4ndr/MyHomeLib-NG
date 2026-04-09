@@ -10,57 +10,80 @@ public partial class DirectoryView : UserControl
         InitializeComponent();
     }
 
-    private MainWindow OwnerWindow =>
-        TopLevel.GetTopLevel(this) as MainWindow
-        ?? throw new InvalidOperationException("DirectoryView must be hosted inside MainWindow.");
+    private MainWindow? OwnerWindow => TopLevel.GetTopLevel(this) as MainWindow;
 
     private void OnDirectoryAuthorsClicked(object? sender, RoutedEventArgs e)
     {
-        OwnerWindow.HandleDirectoryAuthorsClicked();
+        OwnerWindow?.HandleDirectoryAuthorsClicked();
     }
 
     private void OnDirectoryTitlesClicked(object? sender, RoutedEventArgs e)
     {
-        OwnerWindow.HandleDirectoryTitlesClicked();
+        OwnerWindow?.HandleDirectoryTitlesClicked();
     }
 
     private void OnDirectorySeriesClicked(object? sender, RoutedEventArgs e)
     {
-        OwnerWindow.HandleDirectorySeriesClicked();
+        OwnerWindow?.HandleDirectorySeriesClicked();
     }
 
     private void OnDirectoryGenresClicked(object? sender, RoutedEventArgs e)
     {
-        OwnerWindow.HandleDirectoryGenresClicked();
+        OwnerWindow?.HandleDirectoryGenresClicked();
     }
 
     private async void OnAddLibraryClicked(object? sender, RoutedEventArgs e)
     {
-        await OwnerWindow.HandleAddLibraryClickedAsync();
+        if (OwnerWindow is not { } ownerWindow)
+        {
+            return;
+        }
+
+        await ownerWindow.HandleAddLibraryClickedAsync();
     }
 
     private async void OnRefreshClicked(object? sender, RoutedEventArgs e)
     {
-        await OwnerWindow.HandleRefreshClickedAsync();
+        if (OwnerWindow is not { } ownerWindow)
+        {
+            return;
+        }
+
+        await ownerWindow.HandleRefreshClickedAsync();
     }
 
     private void OnSearchModeClicked(object? sender, RoutedEventArgs e)
     {
-        OwnerWindow.HandleSearchModeClicked();
+        OwnerWindow?.HandleSearchModeClicked();
     }
 
     private async void OnBooksSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        await OwnerWindow.HandleBooksSelectionChangedAsync();
+        if (OwnerWindow is not { } ownerWindow)
+        {
+            return;
+        }
+
+        await ownerWindow.HandleBooksSelectionChangedAsync();
     }
 
     private async void OnPrimaryBookActionClicked(object? sender, RoutedEventArgs e)
     {
-        await OwnerWindow.HandlePrimaryBookActionClickedAsync();
+        if (OwnerWindow is not { } ownerWindow)
+        {
+            return;
+        }
+
+        await ownerWindow.HandlePrimaryBookActionClickedAsync();
     }
 
     private async void OnCopyLinkClicked(object? sender, RoutedEventArgs e)
     {
-        await OwnerWindow.HandleCopyLinkClickedAsync();
+        if (OwnerWindow is not { } ownerWindow)
+        {
+            return;
+        }
+
+        await ownerWindow.HandleCopyLinkClickedAsync();
     }
 }

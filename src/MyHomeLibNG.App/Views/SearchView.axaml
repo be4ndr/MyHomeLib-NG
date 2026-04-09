@@ -6,8 +6,8 @@
       <Grid RowDefinitions="Auto,Auto,*">
         <DockPanel Grid.Row="0" Margin="0,0,0,18">
           <StackPanel DockPanel.Dock="Left" Spacing="4">
-            <TextBlock Text="Targeted search" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
-            <TextBlock Text="Search mode is for known books, authors, series, genres, years, and languages." FontSize="13" Foreground="{StaticResource TextMutedBrush}" />
+            <TextBlock Text="Search" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
+            <TextBlock Text="" FontSize="13" Foreground="{StaticResource TextMutedBrush}" />
           </StackPanel>
           <Border DockPanel.Dock="Right" Background="{StaticResource SurfaceAltBrush}" CornerRadius="999" Padding="12,6">
             <TextBlock Text="{Binding ResultsSummary}" Foreground="{StaticResource TextStrongBrush}" FontWeight="SemiBold" />
@@ -17,7 +17,7 @@
         <Border Grid.Row="1" Background="{StaticResource SurfaceAltBrush}" CornerRadius="18" Padding="18" Margin="0,0,0,18">
           <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="*,*">
             <TextBox Grid.ColumnSpan="2"
-                     Watermark="Quick query or ISBN. Use * for all or # for entries starting with a digit."
+                     Watermark="Title, author, or ISBN"
                      Text="{Binding SearchQuery}" />
             <TextBox Grid.Row="1" Margin="0,14,10,0" Watermark="Author" Text="{Binding SearchAuthor}" />
             <TextBox Grid.Row="1" Grid.Column="1" Margin="10,14,0,0" Watermark="Book title" Text="{Binding SearchTitle}" />
@@ -50,25 +50,25 @@
               <Border Width="72" Height="72" CornerRadius="24" Background="{StaticResource AccentSoftBrush}" HorizontalAlignment="Center">
                 <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="L" FontSize="26" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
               </Border>
-              <TextBlock Text="Add a library to begin" FontSize="24" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="{StaticResource TextStrongBrush}" />
-              <TextBlock Text="Choose or add a library first, then use Search mode for targeted queries." TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource TextMutedBrush}" />
-              <Button Classes="primary" HorizontalAlignment="Center" Content="Create your first library" Click="OnAddLibraryClicked" />
+              <TextBlock Text="Select a library to begin" FontSize="24" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="{StaticResource TextStrongBrush}" />
+              <TextBlock Text="Add a library first." TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource TextMutedBrush}" />
+              <Button Classes="primary" HorizontalAlignment="Center" Content="Add library" Click="OnAddLibraryClicked" />
             </StackPanel>
 
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="520" Spacing="12" IsVisible="{Binding ShowSearchPromptState}">
               <Border Width="72" Height="72" CornerRadius="24" Background="{StaticResource SurfaceAltBrush}" HorizontalAlignment="Center">
                 <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="S" FontSize="26" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
               </Border>
-              <TextBlock Text="Target a specific book" FontSize="24" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="{StaticResource TextStrongBrush}" />
-              <TextBlock Text="Search by title, author, series, genre, year, or language. Format and source stay as metadata in the results." TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource TextMutedBrush}" />
+              <TextBlock Text="Enter a search" FontSize="24" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="{StaticResource TextStrongBrush}" />
+              <TextBlock Text="Search the active library." TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource TextMutedBrush}" />
             </StackPanel>
 
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="520" Spacing="12" IsVisible="{Binding ShowNoResultsState}">
               <Border Width="72" Height="72" CornerRadius="24" Background="{StaticResource SurfaceAltBrush}" HorizontalAlignment="Center">
                 <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="0" FontSize="26" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
               </Border>
-              <TextBlock Text="Nothing matched that search" FontSize="24" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="{StaticResource TextStrongBrush}" />
-              <TextBlock Text="Try * for everything, # for entries starting with a digit, or a broader title/author fragment. Leading A/The are ignored for title matching." TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource TextMutedBrush}" />
+              <TextBlock Text="No results found" FontSize="24" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="{StaticResource TextStrongBrush}" />
+              <TextBlock Text="Try a broader search." TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource TextMutedBrush}" />
             </StackPanel>
 
             <ListBox x:Name="BooksList"
@@ -134,7 +134,7 @@
       <Grid RowDefinitions="Auto,*">
         <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,18">
           <TextBlock Text="Details" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
-          <TextBlock Text="Selected title metadata, source context, and available actions." FontSize="13" Foreground="{StaticResource TextMutedBrush}" />
+          <TextBlock Text="Selected book details and actions." FontSize="13" Foreground="{StaticResource TextMutedBrush}" />
         </StackPanel>
 
         <Grid Grid.Row="1">
@@ -142,8 +142,8 @@
             <Border Width="64" Height="64" CornerRadius="22" Background="{StaticResource SurfaceAltBrush}" HorizontalAlignment="Center">
               <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="B" FontSize="24" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
             </Border>
-            <TextBlock Text="Select a title" FontSize="22" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="{StaticResource TextStrongBrush}" />
-            <TextBlock Text="Details, format badges, source information, and open actions will appear here." TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource TextMutedBrush}" />
+            <TextBlock Text="Select a book" FontSize="22" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="{StaticResource TextStrongBrush}" />
+            <TextBlock Text="Select a book to view details." TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource TextMutedBrush}" />
           </StackPanel>
 
           <ScrollViewer IsVisible="{Binding HasSelectedBook}" HorizontalScrollBarVisibility="Disabled">
@@ -164,7 +164,7 @@
 
               <Border Background="{StaticResource SurfaceStrongBrush}" BorderBrush="{StaticResource StrokeBrush}" BorderThickness="1" CornerRadius="18" Padding="18">
                 <StackPanel Spacing="10">
-                  <TextBlock Text="About this book" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
+                  <TextBlock Text="Summary" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
                   <TextBlock Text="{Binding SelectedBookDetails.Description}" TextWrapping="Wrap" Foreground="{StaticResource TextMutedBrush}" />
                 </StackPanel>
               </Border>
@@ -195,7 +195,7 @@
                   <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto">
                     <TextBlock Text="Provider" Foreground="{StaticResource TextMutedBrush}" />
                     <TextBlock Grid.Column="1" Margin="12,0,0,10" Text="{Binding SelectedBookDetails.ProviderId}" Foreground="{StaticResource TextStrongBrush}" />
-                    <TextBlock Grid.Row="1" Margin="0,0,0,10" Text="Catalog ID" Foreground="{StaticResource TextMutedBrush}" />
+                    <TextBlock Grid.Row="1" Margin="0,0,0,10" Text="Source ID" Foreground="{StaticResource TextMutedBrush}" />
                     <TextBlock Grid.Row="1" Grid.Column="1" Margin="12,0,0,10" Text="{Binding SelectedBookDetails.SourceId}" TextWrapping="Wrap" Foreground="{StaticResource TextStrongBrush}" />
                     <TextBlock Grid.Row="2" Text="Best link" Foreground="{StaticResource TextMutedBrush}" />
                     <TextBlock Grid.Row="2" Grid.Column="1" Margin="12,0,0,0" Text="{Binding SelectedBookDetails.PreferredLink}" TextWrapping="Wrap" Foreground="{StaticResource TextStrongBrush}" />

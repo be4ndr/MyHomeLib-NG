@@ -4,8 +4,8 @@
   <Border Classes="panel">
     <Grid RowDefinitions="Auto,Auto,Auto,*">
       <StackPanel Spacing="4">
-        <TextBlock Text="Library workspace" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
-        <TextBlock Text="Use this mode to add sources, switch libraries, review status, and jump into Search or Directory." FontSize="13" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
+        <TextBlock Text="Libraries" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
+        <TextBlock Text="" FontSize="13" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
       </StackPanel>
 
       <Border Grid.Row="1" Margin="0,18,0,18" Background="{StaticResource SurfaceAltBrush}" CornerRadius="18" Padding="18">
@@ -17,22 +17,22 @@
           </StackPanel>
           <StackPanel Spacing="10" IsVisible="{Binding ShowFirstRunState}">
             <TextBlock Text="No libraries yet" FontSize="24" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
-            <TextBlock Text="Add your first source to activate Search and prepare Directory mode." Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
-            <Button Classes="primary" HorizontalAlignment="Left" Content="Add your first library" Click="OnAddLibraryClicked" />
+            <TextBlock Text="Add a library to begin." Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
+            <Button Classes="primary" HorizontalAlignment="Left" Content="Add library" Click="OnAddLibraryClicked" />
           </StackPanel>
         </Grid>
       </Border>
 
       <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="12" Margin="0,0,0,18">
-        <Button Classes="primary" Content="Open Search" Click="OnSearchModeClicked" IsEnabled="{Binding HasSelectedLibrary}" />
-        <Button Classes="secondary" Content="Open Directory" Click="OnDirectoryModeClicked" IsEnabled="{Binding HasSelectedLibrary}" />
-        <Button Classes="secondary" Content="Refresh libraries" Click="OnRefreshClicked" IsEnabled="{Binding CanRefresh}" />
+        <Button Classes="primary" Content="Search" Click="OnSearchModeClicked" IsEnabled="{Binding HasSelectedLibrary}" />
+        <Button Classes="secondary" Content="Browse" Click="OnDirectoryModeClicked" IsEnabled="{Binding HasSelectedLibrary}" />
+        <Button Classes="secondary" Content="Refresh" Click="OnRefreshClicked" IsEnabled="{Binding CanRefresh}" />
       </StackPanel>
 
       <Grid Grid.Row="3" ColumnDefinitions="*,*">
         <Border Grid.Column="0" Margin="0,0,9,0" Background="{StaticResource SurfaceStrongBrush}" BorderBrush="{StaticResource StrokeBrush}" BorderThickness="1" CornerRadius="18" Padding="18">
           <StackPanel Spacing="10">
-            <TextBlock Text="Status overview" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
+            <TextBlock Text="Status" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
             <StackPanel Orientation="Horizontal" Spacing="8">
               <Border Classes="status-pill" IsVisible="{Binding ShowHealthySourceStatus}">
                 <TextBlock Text="{Binding ActiveLibrarySourceStatus}" Foreground="{StaticResource AccentBrush}" FontSize="11" FontWeight="SemiBold" />
@@ -46,9 +46,9 @@
         </Border>
         <Border Grid.Column="1" Margin="9,0,0,0" Background="{StaticResource SurfaceStrongBrush}" BorderBrush="{StaticResource StrokeBrush}" BorderThickness="1" CornerRadius="18" Padding="18">
           <StackPanel Spacing="10">
-            <TextBlock Text="Next steps" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
-            <TextBlock Text="Search mode keeps the current catalog and details layout." Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
-            <TextBlock Text="Directory mode is a scaffold for later implementation." Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
+            <TextBlock Text="Browse" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
+            <TextBlock Text="Search the active library." Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
+            <TextBlock Text="Browse by author, title, series, or genre." Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
           </StackPanel>
         </Border>
       </Grid>

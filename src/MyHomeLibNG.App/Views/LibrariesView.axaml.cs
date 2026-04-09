@@ -10,27 +10,40 @@ public partial class LibrariesView : UserControl
         InitializeComponent();
     }
 
-    private MainWindow OwnerWindow =>
-        TopLevel.GetTopLevel(this) as MainWindow
-        ?? throw new InvalidOperationException("LibrariesView must be hosted inside MainWindow.");
+    private MainWindow? OwnerWindow => TopLevel.GetTopLevel(this) as MainWindow;
 
     private async void OnAddLibraryClicked(object? sender, RoutedEventArgs e)
     {
-        await OwnerWindow.HandleAddLibraryClickedAsync();
+        if (OwnerWindow is not { } ownerWindow)
+        {
+            return;
+        }
+
+        await ownerWindow.HandleAddLibraryClickedAsync();
     }
 
     private void OnSearchModeClicked(object? sender, RoutedEventArgs e)
     {
-        OwnerWindow.HandleSearchModeClicked();
+        OwnerWindow?.HandleSearchModeClicked();
     }
 
     private async void OnDirectoryModeClicked(object? sender, RoutedEventArgs e)
     {
-        await OwnerWindow.HandleDirectoryModeClickedAsync();
+        if (OwnerWindow is not { } ownerWindow)
+        {
+            return;
+        }
+
+        await ownerWindow.HandleDirectoryModeClickedAsync();
     }
 
     private async void OnRefreshClicked(object? sender, RoutedEventArgs e)
     {
-        await OwnerWindow.HandleRefreshClickedAsync();
+        if (OwnerWindow is not { } ownerWindow)
+        {
+            return;
+        }
+
+        await ownerWindow.HandleRefreshClickedAsync();
     }
 }

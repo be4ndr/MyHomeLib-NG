@@ -12,8 +12,8 @@
   <Border Background="#FFFBF9F4" BorderBrush="#FFE0D9CC" BorderThickness="1" CornerRadius="22" Padding="22">
     <Grid RowDefinitions="Auto,Auto,Auto,*,Auto">
       <StackPanel Grid.Row="0" Spacing="4">
-        <TextBlock Text="Add a library" FontSize="24" FontWeight="SemiBold" Foreground="#FF1F2527" />
-        <TextBlock Text="Choose a local offline catalog or a preset online source." Foreground="#FF5E676B" />
+        <TextBlock Text="Add library" FontSize="24" FontWeight="SemiBold" Foreground="#FF1F2527" />
+        <TextBlock Text="Choose a library or source." Foreground="#FF5E676B" />
       </StackPanel>
 
       <Border Grid.Row="1"
@@ -56,7 +56,7 @@
             </StackPanel>
 
             <StackPanel Spacing="6">
-              <TextBlock Text="Archive directory" FontWeight="SemiBold" Foreground="#FF1F2527" />
+              <TextBlock Text="Archive folder" FontWeight="SemiBold" Foreground="#FF1F2527" />
               <Grid ColumnDefinitions="*,Auto">
                 <TextBox Text="{Binding ArchiveDirectoryPath}" Watermark="C:\Books\Archives" />
                 <Button Grid.Column="1" Margin="10,0,0,0" Content="Browse..." Click="OnBrowseArchiveClicked" />
@@ -84,7 +84,7 @@
                 BorderBrush="#FF2B6A69"
                 CornerRadius="12"
                 Padding="16,10"
-                Content="Save library"
+                Content="Add library"
                 Click="OnSaveClicked" />
       </StackPanel>
     </Grid>
