@@ -1,0 +1,30 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="MyHomeLibNG.App.DeleteLibraryDialog"
+        Width="440"
+        SizeToContent="Height"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        Title="Delete library"
+        Background="#FFF4F1EA">
+  <Border Padding="24" Background="#FFF4F1EA">
+    <StackPanel Spacing="18">
+      <StackPanel Spacing="6">
+        <TextBlock Text="Delete library?" FontSize="22" FontWeight="SemiBold" />
+        <TextBlock Text="{Binding Message}" TextWrapping="Wrap" />
+      </StackPanel>
+
+      <Border Background="#FFF7E4CC" BorderBrush="#FFE4A85F" BorderThickness="1" CornerRadius="14" Padding="14">
+        <StackPanel Spacing="6">
+          <TextBlock Text="{Binding LibraryName}" FontWeight="SemiBold" />
+          <TextBlock Text="{Binding LibraryDetails}" TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
+
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+        <Button Content="Cancel" Click="OnCancelClicked" />
+        <Button Content="Delete" Click="OnDeleteClicked" />
+      </StackPanel>
+    </StackPanel>
+  </Border>
+</Window>

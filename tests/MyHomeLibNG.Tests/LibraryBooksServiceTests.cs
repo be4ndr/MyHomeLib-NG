@@ -105,6 +105,12 @@ public sealed class LibraryBooksServiceTests
             _profiles[profile.Id] = profile;
             return Task.FromResult(profile.Id);
         }
+
+        public Task DeleteAsync(long libraryId, CancellationToken cancellationToken = default)
+        {
+            _profiles.Remove(libraryId);
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class FakeBookProviderFactory : IBookProviderFactory

@@ -9,4 +9,5 @@ public interface IActiveLibraryContext
 
     Task SetActiveAsync(long libraryId, CancellationToken cancellationToken = default);
     Task SetActiveAsync(LibraryProfile profile, CancellationToken cancellationToken = default);
+    Task ClearAsync(CancellationToken cancellationToken = default);
 }

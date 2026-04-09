@@ -419,16 +419,8 @@ public sealed class MainWindowViewModel : ObservableObject
             if (target is null)
             {
                 SelectedLibrary = null;
-                ActiveLibraryName = "No library selected";
-                ActiveLibrarySourceStatus = "Waiting";
-                ActiveLibrarySourceSummary = "No source connected yet.";
-                _activeLibraryHasSourceIssues = false;
-                Results.Clear();
-                SelectedBook = null;
-                SelectedBookDetails = null;
-                _loadedLibraryId = null;
-                _loadedBookSourceId = null;
-                _hasPerformedSearch = false;
+                await _activeLibraryContext.ClearAsync();
+                ClearActiveLibraryState();
                 StatusMessage = "Add an offline folder or online catalog to begin building your shelf.";
                 UpdateDerivedState();
                 return;
@@ -540,6 +532,45 @@ public sealed class MainWindowViewModel : ObservableObject
             var newId = await _libraryRepository.AddAsync(profile);
             StatusMessage = $"Added {profile.Name}.";
             await LoadLibrariesAsync(newId);
+        });
+    }
+
+    public async Task DeleteLibraryAsync(LibraryProfileItemViewModel library)
+    {
+        ArgumentNullException.ThrowIfNull(library);
+
+        await RunBusyAsync($"Deleting {library.Name}...", async () =>
+        {
+            var wasSelected = SelectedLibrary?.Id == library.Id;
+            var wasActive = _loadedLibraryId == library.Id || _activeLibraryContext.Current?.Id == library.Id;
+
+            if (wasSelected)
+            {
+                SelectedLibrary = null;
+            }
+
+            await _libraryProfilesService.RemoveAsync(library.Id);
+
+            var existingItem = Libraries.FirstOrDefault(item => item.Id == library.Id);
+            if (existingItem is not null)
+            {
+                Libraries.Remove(existingItem);
+            }
+
+            if (wasSelected || wasActive)
+            {
+                await _activeLibraryContext.ClearAsync();
+                ClearActiveLibraryState();
+                StatusMessage = Libraries.Count == 0
+                    ? $"Deleted {library.Name}. Add an offline folder or online catalog to begin building your shelf."
+                    : $"Deleted {library.Name}. Choose another library to continue.";
+            }
+            else
+            {
+                StatusMessage = $"Deleted {library.Name}.";
+            }
+
+            UpdateDerivedState();
         });
     }
 
@@ -671,13 +702,8 @@ public sealed class MainWindowViewModel : ObservableObject
             _activeLibraryHasSourceIssues = sourceHealth.HasIssues;
             ErrorMessage = null;
 
-            ResetDirectoryBrowser(clearCache: true);
-            Results.Clear();
-            SelectedBook = null;
-            SelectedBookDetails = null;
+            ResetLibraryWorkspace();
             _loadedLibraryId = SelectedLibrary.Id;
-            _loadedBookSourceId = null;
-            _hasPerformedSearch = false;
             StatusMessage = sourceHealth.HasIssues
                 ? $"{SelectedLibrary.Name} needs source attention before every action will work reliably."
                 : autoSearch
@@ -779,6 +805,27 @@ public sealed class MainWindowViewModel : ObservableObject
         var request = PendingLaunchRequest;
         PendingLaunchRequest = null;
         return request;
+    }
+
+    private void ClearActiveLibraryState()
+    {
+        ActiveLibraryName = "No library selected";
+        ActiveLibrarySourceStatus = "Waiting";
+        ActiveLibrarySourceSummary = "No source connected yet.";
+        _activeLibraryHasSourceIssues = false;
+        ErrorMessage = null;
+        _loadedLibraryId = null;
+        ResetLibraryWorkspace();
+    }
+
+    private void ResetLibraryWorkspace()
+    {
+        Results.Clear();
+        SelectedBook = null;
+        SelectedBookDetails = null;
+        _loadedBookSourceId = null;
+        _hasPerformedSearch = false;
+        ResetDirectoryBrowser(clearCache: true);
     }
 
     private void OnCollectionsChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -1050,19 +1097,32 @@ public sealed class MainWindowViewModel : ObservableObject
 
     private void ResetDirectoryBrowser(bool clearCache)
     {
-        DirectoryEntries.Clear();
-        DirectoryBooks.Clear();
-        DirectoryAlphabetOptions.Clear();
-        _selectedDirectoryEntry = null;
-        OnPropertyChanged(nameof(SelectedDirectoryEntry));
-        SelectedDirectoryAlphabet = "*";
-        DirectoryFilterText = string.Empty;
-
         if (clearCache)
         {
             _directoryCatalog.Clear();
             _directoryCatalogLibraryId = null;
             _hasLoadedDirectoryCatalog = false;
+        }
+
+        DirectoryEntries.Clear();
+        DirectoryBooks.Clear();
+        DirectoryAlphabetOptions.Clear();
+        if (_selectedDirectoryEntry is not null)
+        {
+            _selectedDirectoryEntry = null;
+            OnPropertyChanged(nameof(SelectedDirectoryEntry));
+        }
+
+        if (!string.Equals(_selectedDirectoryAlphabet, "*", StringComparison.Ordinal))
+        {
+            _selectedDirectoryAlphabet = "*";
+            OnPropertyChanged(nameof(SelectedDirectoryAlphabet));
+        }
+
+        if (!string.IsNullOrEmpty(_directoryFilterText))
+        {
+            _directoryFilterText = string.Empty;
+            OnPropertyChanged(nameof(DirectoryFilterText));
         }
     }
 
