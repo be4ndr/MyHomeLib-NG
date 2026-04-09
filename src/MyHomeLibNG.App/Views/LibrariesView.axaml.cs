@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Markup.Xaml;
 
 namespace MyHomeLibNG.App.Views;
 
@@ -45,5 +46,10 @@ public partial class LibrariesView : UserControl
         }
 
         await ownerWindow.HandleRefreshClickedAsync();
+    }
+
+    private void InitializeComponent()
+    {
+        AvaloniaXamlLoader.Load(this);
     }
 }
