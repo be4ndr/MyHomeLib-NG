@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Markup.Xaml;
 
 namespace MyHomeLibNG.App.Views;
 
@@ -85,5 +86,10 @@ public partial class DirectoryView : UserControl
         }
 
         await ownerWindow.HandleCopyLinkClickedAsync();
+    }
+
+    private void InitializeComponent()
+    {
+        AvaloniaXamlLoader.Load(this);
     }
 }
