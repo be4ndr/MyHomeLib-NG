@@ -7,6 +7,11 @@ public interface ILibraryRepository
     Task<IReadOnlyList<LibraryProfile>> GetLibraryProfilesAsync(CancellationToken cancellationToken = default);
     Task<LibraryProfile?> GetByIdAsync(long libraryId, CancellationToken cancellationToken = default);
     Task<long> AddAsync(LibraryProfile profile, CancellationToken cancellationToken = default);
+    Task<ImportedBookMetadataSnapshot?> GetImportedBookMetadataAsync(
+        long libraryProfileId,
+        string archivePath,
+        string entryPath,
+        CancellationToken cancellationToken = default);
     Task<long> UpsertImportedBookAsync(BookImportRecord book, CancellationToken cancellationToken = default);
     Task DeleteAsync(long libraryId, CancellationToken cancellationToken = default);
 }

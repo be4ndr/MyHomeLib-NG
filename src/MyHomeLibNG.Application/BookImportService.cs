@@ -25,6 +25,7 @@ public sealed class BookImportService
     public async Task<BookImportSummary> ImportLibraryAsync(
         LibraryProfile profile,
         string? inputPath = null,
+        IProgress<BookImportProgressUpdate>? progress = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(profile);
@@ -39,18 +40,63 @@ public sealed class BookImportService
         var archivePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var entriesDiscovered = 0;
         var importedCount = 0;
+        var booksAdded = 0;
+        var booksUpdated = 0;
+        var booksSkipped = 0;
+        var archivesProcessed = 0;
+        string? currentArchive = null;
 
         await foreach (var entry in _zipArchiveScanner.ScanAsync(scanPath, cancellationToken))
         {
             cancellationToken.ThrowIfCancellationRequested();
+
+            if (!string.Equals(currentArchive, entry.ArchivePath, StringComparison.OrdinalIgnoreCase))
+            {
+                if (currentArchive is not null)
+                {
+                    archivesProcessed++;
+                }
+
+                currentArchive = entry.ArchivePath;
+                ReportProgress(progress, currentArchive, archivesProcessed, entriesDiscovered, booksAdded, booksUpdated, booksSkipped, failures.Count,
+                    $"Scanning {Path.GetFileName(currentArchive)}", isImportant: true);
+            }
+
             archivePaths.Add(entry.ArchivePath);
             entriesDiscovered++;
 
             try
             {
                 var record = await BuildImportRecordAsync(profile.Id, entry, cancellationToken);
+                var existing = await _libraryRepository.GetImportedBookMetadataAsync(
+                    profile.Id,
+                    entry.ArchivePath,
+                    entry.EntryPath,
+                    cancellationToken);
+
+                if (string.Equals(existing?.ContentHash, record.ContentHash, StringComparison.OrdinalIgnoreCase))
+                {
+                    booksSkipped++;
+                    ReportProgress(progress, currentArchive, archivesProcessed, entriesDiscovered, booksAdded, booksUpdated, booksSkipped, failures.Count,
+                        $"Skipped {record.Title} (unchanged).");
+                    continue;
+                }
+
                 await _libraryRepository.UpsertImportedBookAsync(record, cancellationToken);
                 importedCount++;
+
+                if (existing is null)
+                {
+                    booksAdded++;
+                    ReportProgress(progress, currentArchive, archivesProcessed, entriesDiscovered, booksAdded, booksUpdated, booksSkipped, failures.Count,
+                        $"Added {record.Title}.");
+                }
+                else
+                {
+                    booksUpdated++;
+                    ReportProgress(progress, currentArchive, archivesProcessed, entriesDiscovered, booksAdded, booksUpdated, booksSkipped, failures.Count,
+                        $"Updated {record.Title}.");
+                }
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
@@ -60,14 +106,31 @@ public sealed class BookImportService
                     EntryPath = entry.EntryPath,
                     Message = exception.Message
                 });
+
+                ReportProgress(progress, currentArchive, archivesProcessed, entriesDiscovered, booksAdded, booksUpdated, booksSkipped, failures.Count,
+                    $"Error in {entry.EntryPath}: {exception.Message}",
+                    isImportant: true);
             }
         }
+
+        if (currentArchive is not null)
+        {
+            archivesProcessed++;
+        }
+
+        ReportProgress(progress, currentArchive, archivesProcessed, entriesDiscovered, booksAdded, booksUpdated, booksSkipped, failures.Count,
+            $"Completed scan: {importedCount} imported, {booksSkipped} skipped, {failures.Count} errors.",
+            isImportant: true,
+            isCompleted: true);
 
         return new BookImportSummary
         {
             ScanPath = scanPath,
             ArchivesScanned = archivePaths.Count,
             EntriesDiscovered = entriesDiscovered,
+            BooksAdded = booksAdded,
+            BooksUpdated = booksUpdated,
+            BooksSkipped = booksSkipped,
             ImportedCount = importedCount,
             Failures = failures
         };
@@ -161,4 +224,32 @@ public sealed class BookImportService
 
     private static string? NullIfWhiteSpace(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static void ReportProgress(
+        IProgress<BookImportProgressUpdate>? progress,
+        string? currentArchive,
+        int archivesProcessed,
+        int booksFound,
+        int booksAdded,
+        int booksUpdated,
+        int booksSkipped,
+        int errorsCount,
+        string? logLine,
+        bool isImportant = false,
+        bool isCompleted = false)
+    {
+        progress?.Report(new BookImportProgressUpdate
+        {
+            CurrentArchive = currentArchive,
+            ArchivesProcessed = archivesProcessed,
+            BooksFound = booksFound,
+            BooksAdded = booksAdded,
+            BooksUpdated = booksUpdated,
+            BooksSkipped = booksSkipped,
+            ErrorsCount = errorsCount,
+            LogLine = logLine,
+            IsImportant = isImportant,
+            IsCompleted = isCompleted
+        });
+    }
 }

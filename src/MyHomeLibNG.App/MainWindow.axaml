@@ -162,7 +162,7 @@
 
   <Grid RowDefinitions="Auto,*,Auto">
     <Border Grid.Row="0" Background="{StaticResource HeaderBrush}" Padding="24,20,24,18">
-      <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto">
+      <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto,Auto">
         <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="14">
           <Border Width="44" Height="44" CornerRadius="14" Background="#26FFFFFF" BorderBrush="#22FFFFFF" BorderThickness="1">
             <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="M" FontSize="18" FontWeight="Bold" Foreground="White" />
@@ -203,7 +203,14 @@
 
         <Button Grid.Column="3" Margin="14,0,0,0" Classes="ghost" Content="Add library" Click="OnAddLibraryClicked" IsEnabled="{Binding CanTriggerActions}" />
         <Button Grid.Column="4" Margin="14,0,0,0" Classes="ghost" Content="Refresh" Click="OnRefreshClicked" IsEnabled="{Binding CanRefresh}" />
-        <Button Grid.Column="5" Margin="14,0,0,0" Classes="ghost" Content="Settings" Click="OnSettingsClicked" IsEnabled="{Binding CanTriggerActions}" />
+        <Button Grid.Column="5"
+                Margin="14,0,0,0"
+                Classes="ghost"
+                Content="Scan local"
+                Click="OnScanLocalClicked"
+                IsEnabled="{Binding CanScanSelectedLibrary}"
+                IsVisible="{Binding HasSelectedOfflineLibrary}" />
+        <Button Grid.Column="6" Margin="14,0,0,0" Classes="ghost" Content="Settings" Click="OnSettingsClicked" IsEnabled="{Binding CanTriggerActions}" />
       </Grid>
     </Border>
 

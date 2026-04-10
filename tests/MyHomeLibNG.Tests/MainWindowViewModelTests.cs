@@ -159,6 +159,16 @@ public sealed class MainWindowViewModelTests
             return Task.FromResult(assignedId);
         }
 
+        public Task<ImportedBookMetadataSnapshot?> GetImportedBookMetadataAsync(
+            long libraryProfileId,
+            string archivePath,
+            string entryPath,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult<ImportedBookMetadataSnapshot?>(null);
+        }
+
         public Task<long> UpsertImportedBookAsync(BookImportRecord book, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();

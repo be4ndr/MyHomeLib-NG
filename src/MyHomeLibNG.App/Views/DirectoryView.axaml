@@ -189,17 +189,29 @@
           <ScrollViewer IsVisible="{Binding HasSelectedBook}" HorizontalScrollBarVisibility="Disabled">
             <StackPanel Spacing="18">
               <Border Background="{StaticResource SurfaceAltBrush}" CornerRadius="18" Padding="18">
-                <StackPanel Spacing="10">
-                  <Border Background="{StaticResource AccentSoftBrush}" CornerRadius="999" Padding="10,4" HorizontalAlignment="Left">
-                    <TextBlock Text="{Binding SelectedBookDetails.ProviderName}" Foreground="{StaticResource AccentBrush}" />
+                <Grid ColumnDefinitions="Auto,*">
+                  <Border Width="96"
+                          Height="132"
+                          Background="{StaticResource SurfaceStrongBrush}"
+                          BorderBrush="{StaticResource StrokeBrush}"
+                          BorderThickness="1"
+                          CornerRadius="16"
+                          IsVisible="{Binding SelectedBookDetails.HasCoverImage}">
+                    <Image Source="{Binding SelectedBookDetails.CoverImage}" Stretch="UniformToFill" ClipToBounds="True" />
                   </Border>
-                  <TextBlock Text="{Binding SelectedBookDetails.Title}" FontSize="24" FontWeight="SemiBold" TextWrapping="Wrap" Foreground="{StaticResource TextStrongBrush}" />
-                  <TextBlock Text="{Binding SelectedBookDetails.AuthorsLine}" FontSize="14" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
-                  <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,6,0,0">
-                    <Button Classes="primary" Content="{Binding SelectedBookDetails.PrimaryActionLabel}" IsEnabled="{Binding SelectedBookDetails.CanPerformPrimaryAction}" Click="OnPrimaryBookActionClicked" />
-                    <Button Classes="secondary" Content="{Binding SelectedBookDetails.SecondaryActionLabel}" IsEnabled="{Binding SelectedBookDetails.CanCopyLink}" Click="OnCopyLinkClicked" />
+                  <StackPanel Grid.Column="1" Margin="16,0,0,0" Spacing="10">
+                    <Border Background="{StaticResource AccentSoftBrush}" CornerRadius="999" Padding="10,4" HorizontalAlignment="Left">
+                      <TextBlock Text="{Binding SelectedBookDetails.ProviderName}" Foreground="{StaticResource AccentBrush}" />
+                    </Border>
+                    <TextBlock Text="{Binding SelectedBookDetails.Title}" FontSize="24" FontWeight="SemiBold" TextWrapping="Wrap" Foreground="{StaticResource TextStrongBrush}" />
+                    <TextBlock Text="{Binding SelectedBookDetails.AuthorsLine}" FontSize="14" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding SelectedBookDetails.SeriesLine}" Foreground="{StaticResource TextMutedBrush}" />
+                    <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,6,0,0">
+                      <Button Classes="primary" Content="{Binding SelectedBookDetails.PrimaryActionLabel}" IsEnabled="{Binding SelectedBookDetails.CanPerformPrimaryAction}" Click="OnPrimaryBookActionClicked" />
+                      <Button Classes="secondary" Content="{Binding SelectedBookDetails.SecondaryActionLabel}" IsEnabled="{Binding SelectedBookDetails.CanCopyLink}" Click="OnCopyLinkClicked" />
+                    </StackPanel>
                   </StackPanel>
-                </StackPanel>
+                </Grid>
               </Border>
 
               <Border Background="{StaticResource SurfaceStrongBrush}" BorderBrush="{StaticResource StrokeBrush}" BorderThickness="1" CornerRadius="18" Padding="18">
@@ -212,19 +224,21 @@
               <Border Background="{StaticResource SurfaceStrongBrush}" BorderBrush="{StaticResource StrokeBrush}" BorderThickness="1" CornerRadius="18" Padding="18">
                 <StackPanel Spacing="14">
                   <TextBlock Text="Metadata" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
-                  <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
+                  <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto">
                     <TextBlock Text="Formats" Foreground="{StaticResource TextMutedBrush}" />
                     <TextBlock Grid.Column="1" Margin="12,0,0,10" Text="{Binding SelectedBookDetails.FormatsLine}" TextWrapping="Wrap" Foreground="{StaticResource TextStrongBrush}" />
-                    <TextBlock Grid.Row="1" Margin="0,0,0,10" Text="Publisher" Foreground="{StaticResource TextMutedBrush}" />
-                    <TextBlock Grid.Row="1" Grid.Column="1" Margin="12,0,0,10" Text="{Binding SelectedBookDetails.PublisherLine}" TextWrapping="Wrap" Foreground="{StaticResource TextStrongBrush}" />
-                    <TextBlock Grid.Row="2" Margin="0,0,0,10" Text="Year" Foreground="{StaticResource TextMutedBrush}" />
-                    <TextBlock Grid.Row="2" Grid.Column="1" Margin="12,0,0,10" Text="{Binding SelectedBookDetails.YearLine}" Foreground="{StaticResource TextStrongBrush}" />
-                    <TextBlock Grid.Row="3" Margin="0,0,0,10" Text="Language" Foreground="{StaticResource TextMutedBrush}" />
-                    <TextBlock Grid.Row="3" Grid.Column="1" Margin="12,0,0,10" Text="{Binding SelectedBookDetails.LanguageLine}" Foreground="{StaticResource TextStrongBrush}" />
-                    <TextBlock Grid.Row="4" Margin="0,0,0,10" Text="Subjects" Foreground="{StaticResource TextMutedBrush}" />
-                    <TextBlock Grid.Row="4" Grid.Column="1" Margin="12,0,0,10" Text="{Binding SelectedBookDetails.SubjectsLine}" TextWrapping="Wrap" Foreground="{StaticResource TextStrongBrush}" />
-                    <TextBlock Grid.Row="5" Text="ISBN" Foreground="{StaticResource TextMutedBrush}" />
-                    <TextBlock Grid.Row="5" Grid.Column="1" Margin="12,0,0,0" Text="{Binding SelectedBookDetails.IsbnLine}" TextWrapping="Wrap" Foreground="{StaticResource TextStrongBrush}" />
+                    <TextBlock Grid.Row="1" Margin="0,0,0,10" Text="Series" Foreground="{StaticResource TextMutedBrush}" />
+                    <TextBlock Grid.Row="1" Grid.Column="1" Margin="12,0,0,10" Text="{Binding SelectedBookDetails.SeriesLine}" TextWrapping="Wrap" Foreground="{StaticResource TextStrongBrush}" />
+                    <TextBlock Grid.Row="2" Margin="0,0,0,10" Text="Publisher" Foreground="{StaticResource TextMutedBrush}" />
+                    <TextBlock Grid.Row="2" Grid.Column="1" Margin="12,0,0,10" Text="{Binding SelectedBookDetails.PublisherLine}" TextWrapping="Wrap" Foreground="{StaticResource TextStrongBrush}" />
+                    <TextBlock Grid.Row="3" Margin="0,0,0,10" Text="Year" Foreground="{StaticResource TextMutedBrush}" />
+                    <TextBlock Grid.Row="3" Grid.Column="1" Margin="12,0,0,10" Text="{Binding SelectedBookDetails.YearLine}" Foreground="{StaticResource TextStrongBrush}" />
+                    <TextBlock Grid.Row="4" Margin="0,0,0,10" Text="Language" Foreground="{StaticResource TextMutedBrush}" />
+                    <TextBlock Grid.Row="4" Grid.Column="1" Margin="12,0,0,10" Text="{Binding SelectedBookDetails.LanguageLine}" Foreground="{StaticResource TextStrongBrush}" />
+                    <TextBlock Grid.Row="5" Margin="0,0,0,10" Text="Subjects" Foreground="{StaticResource TextMutedBrush}" />
+                    <TextBlock Grid.Row="5" Grid.Column="1" Margin="12,0,0,10" Text="{Binding SelectedBookDetails.SubjectsLine}" TextWrapping="Wrap" Foreground="{StaticResource TextStrongBrush}" />
+                    <TextBlock Grid.Row="6" Text="ISBN" Foreground="{StaticResource TextMutedBrush}" />
+                    <TextBlock Grid.Row="6" Grid.Column="1" Margin="12,0,0,0" Text="{Binding SelectedBookDetails.IsbnLine}" TextWrapping="Wrap" Foreground="{StaticResource TextStrongBrush}" />
                   </Grid>
                 </StackPanel>
               </Border>

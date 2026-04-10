@@ -42,6 +42,9 @@ public sealed class BookImportServiceTests
         Assert.Equal(1, summary.ArchivesScanned);
         Assert.Equal(2, summary.EntriesDiscovered);
         Assert.Equal(1, summary.ImportedCount);
+        Assert.Equal(1, summary.BooksAdded);
+        Assert.Equal(0, summary.BooksUpdated);
+        Assert.Equal(0, summary.BooksSkipped);
         Assert.Equal(1, summary.FailedCount);
         Assert.Equal("books/bad.fb2", summary.Failures[0].EntryPath);
 
@@ -80,7 +83,7 @@ public sealed class BookImportServiceTests
             new Fb2MetadataParser(),
             new SqliteLibraryRepository(database.ConnectionString));
 
-        await service.ImportLibraryAsync(CreateProfile(), archivePath);
+        var firstSummary = await service.ImportLibraryAsync(CreateProfile(), archivePath);
 
         fileSystem.AddFile(archivePath, Fb2ImportTestData.CreateZipArchive(
             ("books/book.fb2", Fb2ImportTestData.CreateFb2(
@@ -89,13 +92,15 @@ public sealed class BookImportServiceTests
                 annotationParagraphs: ["Updated annotation."],
                 publishYear: 2022))));
 
-        await service.ImportLibraryAsync(CreateProfile(), archivePath);
+        var secondSummary = await service.ImportLibraryAsync(CreateProfile(), archivePath);
 
         var rowCount = await ExecuteScalarAsync<long>(database.ConnectionString, "SELECT COUNT(*) FROM Books;");
         var title = await ExecuteScalarAsync<string>(database.ConnectionString, "SELECT Title FROM Books;");
         var authors = await ExecuteScalarAsync<string>(database.ConnectionString, "SELECT Authors FROM Books;");
         var year = await ExecuteScalarAsync<long>(database.ConnectionString, "SELECT PublishYear FROM Books;");
 
+        Assert.Equal(1, firstSummary.BooksAdded);
+        Assert.Equal(1, secondSummary.BooksUpdated);
         Assert.Equal(1L, rowCount);
         Assert.Equal("Updated Title", title);
         Assert.Equal("Second Author", authors);

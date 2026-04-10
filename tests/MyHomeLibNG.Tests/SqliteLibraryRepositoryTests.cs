@@ -267,6 +267,57 @@ public sealed class SqliteLibraryRepositoryTests
     }
 
     [Fact]
+    public async Task GetImportedBookMetadataAsync_ReturnsStoredIndexedMetadata()
+    {
+        var database = await CreateDatabaseAsync();
+
+        try
+        {
+            var repository = new SqliteLibraryRepository(database.ConnectionString);
+            await repository.UpsertImportedBookAsync(new BookImportRecord
+            {
+                LibraryProfileId = 55,
+                Title = "Indexed title",
+                Authors = "Indexed Author",
+                Annotation = "Indexed annotation",
+                PublishYear = 1999,
+                PrimaryFormat = FileFormat.Fb2,
+                Series = "Indexed series",
+                Genres = "history; memoir",
+                Language = "ru",
+                ArchivePath = @"X:\mock-library\archives\indexed.zip",
+                EntryPath = "books/indexed.fb2",
+                FileName = "indexed.fb2",
+                FileSize = 123,
+                ContentHash = "hash-indexed",
+                CoverThumbnail = [7, 8, 9],
+                CreatedAt = DateTimeOffset.UtcNow,
+                UpdatedAt = DateTimeOffset.UtcNow
+            });
+
+            var metadata = await repository.GetImportedBookMetadataAsync(
+                55,
+                @"X:\mock-library\archives\indexed.zip",
+                "books/indexed.fb2");
+
+            Assert.NotNull(metadata);
+            Assert.Equal("Indexed title", metadata!.Title);
+            Assert.Equal("Indexed Author", metadata.Authors);
+            Assert.Equal("Indexed annotation", metadata.Annotation);
+            Assert.Equal(1999, metadata.PublishYear);
+            Assert.Equal("Indexed series", metadata.Series);
+            Assert.Equal("history; memoir", metadata.Genres);
+            Assert.Equal("ru", metadata.Language);
+            Assert.Equal("hash-indexed", metadata.ContentHash);
+            Assert.Equal([7, 8, 9], metadata.CoverThumbnail);
+        }
+        finally
+        {
+            database.Dispose();
+        }
+    }
+
+    [Fact]
     public async Task ResolveAsync_ReturnsOnlineApiStructure()
     {
         var resolver = new LibrarySourceResolver(CreateOnlineEnvironment());

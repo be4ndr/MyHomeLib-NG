@@ -1,3 +1,4 @@
+using Avalonia.Media.Imaging;
 using MyHomeLibNG.Core.Models;
 
 namespace MyHomeLibNG.App.ViewModels;
@@ -7,11 +8,14 @@ public sealed class BookDetailsViewModel
     public BookDetailsViewModel(BookDetails details)
     {
         Details = details;
+        CoverImage = CreateBitmap(details.CoverThumbnail);
     }
 
     public BookDetails Details { get; }
+    public Bitmap? CoverImage { get; }
     public string Title => Details.Title;
     public string AuthorsLine => Details.Authors.Count == 0 ? "Unknown author" : string.Join(", ", Details.Authors);
+    public string SeriesLine => string.IsNullOrWhiteSpace(Details.Series) ? "Standalone" : Details.Series!;
     public string Description => string.IsNullOrWhiteSpace(Details.Description)
         ? "No extended description is available for this title yet."
         : Details.Description!;
@@ -24,6 +28,7 @@ public sealed class BookDetailsViewModel
     public string YearLine => Details.PublishedYear?.ToString() ?? "Unknown";
     public string LanguageLine => string.IsNullOrWhiteSpace(Details.Language) ? "Unknown" : Details.Language!.ToUpperInvariant();
     public string IsbnLine => Details.Isbn13 ?? Details.Isbn10 ?? "Not available";
+    public bool HasCoverImage => CoverImage is not null;
     public bool HasContentHandle => Details.ContentHandle is not null;
     public bool HasReadLink => !string.IsNullOrWhiteSpace(Details.ReadLink);
     public bool HasBorrowLink => !string.IsNullOrWhiteSpace(Details.BorrowLink);
@@ -59,4 +64,21 @@ public sealed class BookDetailsViewModel
     public string? PreferredLink => Details.ReadLink
         ?? Details.BorrowLink
         ?? Details.DownloadLinks.FirstOrDefault()?.Url;
+
+    private static Bitmap? CreateBitmap(byte[]? bytes)
+    {
+        if (bytes is null || bytes.Length == 0)
+        {
+            return null;
+        }
+
+        try
+        {
+            return new Bitmap(new MemoryStream(bytes, writable: false));
+        }
+        catch
+        {
+            return null;
+        }
+    }
 }

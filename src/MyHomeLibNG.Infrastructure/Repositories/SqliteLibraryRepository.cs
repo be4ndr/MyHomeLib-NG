@@ -107,6 +107,55 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
         return Convert.ToInt64(id);
     }
 
+    public async Task<ImportedBookMetadataSnapshot?> GetImportedBookMetadataAsync(
+        long libraryProfileId,
+        string archivePath,
+        string entryPath,
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection = new SqliteConnection(_connectionString);
+        await connection.OpenAsync(cancellationToken);
+
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+                              SELECT Title,
+                                     Authors,
+                                     Annotation,
+                                     PublishYear,
+                                     Series,
+                                     Genres,
+                                     Language,
+                                     ContentHash,
+                                     CoverThumbnail
+                              FROM Books
+                              WHERE LibraryProfileId = $libraryProfileId
+                                AND ArchivePath = $archivePath
+                                AND EntryPath = $entryPath;
+                              """;
+        command.Parameters.AddWithValue("$libraryProfileId", libraryProfileId);
+        command.Parameters.AddWithValue("$archivePath", archivePath);
+        command.Parameters.AddWithValue("$entryPath", entryPath);
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        if (!await reader.ReadAsync(cancellationToken))
+        {
+            return null;
+        }
+
+        return new ImportedBookMetadataSnapshot
+        {
+            Title = reader.GetString(0),
+            Authors = GetNullableString(reader, 1),
+            Annotation = GetNullableString(reader, 2),
+            PublishYear = reader.IsDBNull(3) ? null : reader.GetInt32(3),
+            Series = GetNullableString(reader, 4),
+            Genres = GetNullableString(reader, 5),
+            Language = GetNullableString(reader, 6),
+            ContentHash = GetNullableString(reader, 7),
+            CoverThumbnail = reader.IsDBNull(8) ? null : (byte[])reader[8]
+        };
+    }
+
     public async Task<long> UpsertImportedBookAsync(BookImportRecord book, CancellationToken cancellationToken = default)
     {
         ValidateImportedBook(book);

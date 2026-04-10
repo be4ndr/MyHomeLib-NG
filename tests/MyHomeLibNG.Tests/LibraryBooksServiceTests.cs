@@ -106,6 +106,13 @@ public sealed class LibraryBooksServiceTests
             return Task.FromResult(profile.Id);
         }
 
+        public Task<ImportedBookMetadataSnapshot?> GetImportedBookMetadataAsync(
+            long libraryProfileId,
+            string archivePath,
+            string entryPath,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult<ImportedBookMetadataSnapshot?>(null);
+
         public Task<long> UpsertImportedBookAsync(BookImportRecord book, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 

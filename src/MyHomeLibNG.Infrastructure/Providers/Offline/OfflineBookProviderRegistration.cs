@@ -6,15 +6,18 @@ namespace MyHomeLibNG.Infrastructure.Providers.Offline;
 
 public sealed class OfflineBookProviderRegistration : IBookProviderRegistration
 {
+    private readonly ILibraryRepository _libraryRepository;
     private readonly IOfflineCatalogCache _catalogCache;
     private readonly IOfflineBookLocationResolver _locationResolver;
     private readonly OfflineContentStorageRegistry _contentStorageRegistry;
 
     public OfflineBookProviderRegistration(
+        ILibraryRepository libraryRepository,
         IOfflineCatalogCache catalogCache,
         IOfflineBookLocationResolver locationResolver,
         OfflineContentStorageRegistry contentStorageRegistry)
     {
+        _libraryRepository = libraryRepository;
         _catalogCache = catalogCache;
         _locationResolver = locationResolver;
         _contentStorageRegistry = contentStorageRegistry;
@@ -26,5 +29,5 @@ public sealed class OfflineBookProviderRegistration : IBookProviderRegistration
         => string.Equals(profile.ProviderId, ProviderId, StringComparison.OrdinalIgnoreCase);
 
     public IBookProvider Create(LibraryProfile profile)
-        => new OfflineBookProvider(profile, _catalogCache, _locationResolver, _contentStorageRegistry);
+        => new OfflineBookProvider(profile, _libraryRepository, _catalogCache, _locationResolver, _contentStorageRegistry);
 }
