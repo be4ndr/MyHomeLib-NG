@@ -111,6 +111,12 @@ public sealed class MainWindowViewModelTests
             return Task.FromResult(assignedId);
         }
 
+        public Task<long> UpsertImportedBookAsync(BookImportRecord book, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            throw new NotSupportedException();
+        }
+
         public Task DeleteAsync(long libraryId, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();

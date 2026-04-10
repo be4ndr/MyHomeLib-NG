@@ -4,6 +4,7 @@ using MyHomeLibNG.Core.Constants;
 using MyHomeLibNG.Infrastructure.Data;
 using MyHomeLibNG.Infrastructure.Repositories;
 using MyHomeLibNG.Infrastructure.Services;
+using Microsoft.Data.Sqlite;
 using Xunit;
 
 namespace MyHomeLibNG.Tests;
@@ -123,6 +124,144 @@ public sealed class SqliteLibraryRepositoryTests
     }
 
     [Fact]
+    public async Task InitializeAsync_CreatesBooksSchemaWithRequiredColumns()
+    {
+        var database = await CreateDatabaseAsync();
+
+        try
+        {
+            var columns = await GetTableColumnsAsync(database.ConnectionString, "Books");
+
+            Assert.Contains("LibraryProfileId", columns);
+            Assert.Contains("Title", columns);
+            Assert.Contains("Annotation", columns);
+            Assert.Contains("PublishYear", columns);
+            Assert.Contains("PrimaryFormat", columns);
+            Assert.Contains("Series", columns);
+            Assert.Contains("SeriesNumber", columns);
+            Assert.Contains("Genres", columns);
+            Assert.Contains("Language", columns);
+            Assert.Contains("ArchivePath", columns);
+            Assert.Contains("EntryPath", columns);
+            Assert.Contains("FileName", columns);
+            Assert.Contains("FileSize", columns);
+            Assert.Contains("ContentHash", columns);
+            Assert.Contains("CoverThumbnail", columns);
+            Assert.Contains("CreatedAt", columns);
+            Assert.Contains("UpdatedAt", columns);
+        }
+        finally
+        {
+            database.Dispose();
+        }
+    }
+
+    [Fact]
+    public async Task BooksUniqueIndex_PreventsDuplicateLogicalRows()
+    {
+        var database = await CreateDatabaseAsync();
+
+        try
+        {
+            const string duplicateKeyArchivePath = @"X:\mock-library\archives\a.zip";
+            const string duplicateKeyEntryPath = "books/book.fb2";
+
+            await using var connection = new SqliteConnection(database.ConnectionString);
+            await connection.OpenAsync();
+
+            await InsertBookRowAsync(connection, 17, duplicateKeyArchivePath, duplicateKeyEntryPath, "First title");
+
+            var exception = await Assert.ThrowsAsync<SqliteException>(() =>
+                InsertBookRowAsync(connection, 17, duplicateKeyArchivePath, duplicateKeyEntryPath, "Duplicate title"));
+
+            Assert.Equal(19, exception.SqliteErrorCode);
+        }
+        finally
+        {
+            database.Dispose();
+        }
+    }
+
+    [Fact]
+    public async Task UpsertImportedBookAsync_UpdatesExistingBookInsteadOfCreatingDuplicate()
+    {
+        var database = await CreateDatabaseAsync();
+
+        try
+        {
+            var repository = new SqliteLibraryRepository(database.ConnectionString);
+            var createdAt = new DateTimeOffset(2026, 4, 9, 12, 0, 0, TimeSpan.Zero);
+            var initialUpdatedAt = createdAt.AddMinutes(5);
+            var finalUpdatedAt = createdAt.AddMinutes(30);
+
+            var firstId = await repository.UpsertImportedBookAsync(new BookImportRecord
+            {
+                LibraryProfileId = 23,
+                Title = "Original title",
+                Annotation = "Original annotation",
+                PublishYear = 2001,
+                PrimaryFormat = FileFormat.Fb2,
+                Series = "Series A",
+                SeriesNumber = 1,
+                Genres = "fantasy;adventure",
+                Language = "ru",
+                ArchivePath = @"X:\mock-library\archives\set-01.zip",
+                EntryPath = "books/original.fb2",
+                FileName = "original.fb2",
+                FileSize = 111,
+                ContentHash = "hash-1",
+                CoverThumbnail = [1, 2, 3],
+                CreatedAt = createdAt,
+                UpdatedAt = initialUpdatedAt
+            });
+
+            var secondId = await repository.UpsertImportedBookAsync(new BookImportRecord
+            {
+                LibraryProfileId = 23,
+                Title = "Updated title",
+                Annotation = "Updated annotation",
+                PublishYear = 2002,
+                PrimaryFormat = FileFormat.Fb2,
+                Series = "Series B",
+                SeriesNumber = 2,
+                Genres = "science-fiction",
+                Language = "en",
+                ArchivePath = @"X:\mock-library\archives\set-01.zip",
+                EntryPath = "books/original.fb2",
+                FileName = "updated.fb2",
+                FileSize = 222,
+                ContentHash = "hash-2",
+                CoverThumbnail = [9, 8, 7],
+                CreatedAt = createdAt.AddDays(1),
+                UpdatedAt = finalUpdatedAt
+            });
+
+            var rowCount = await ExecuteScalarAsync<long>(database.ConnectionString, "SELECT COUNT(*) FROM Books;");
+            var storedTitle = await ExecuteScalarAsync<string>(database.ConnectionString, "SELECT Title FROM Books;");
+            var storedSeries = await ExecuteScalarAsync<string>(database.ConnectionString, "SELECT Series FROM Books;");
+            var storedCreatedAt = await ExecuteScalarAsync<string>(database.ConnectionString, "SELECT CreatedAt FROM Books;");
+            var storedUpdatedAt = await ExecuteScalarAsync<string>(database.ConnectionString, "SELECT UpdatedAt FROM Books;");
+            var storedFileName = await ExecuteScalarAsync<string>(database.ConnectionString, "SELECT FileName FROM Books;");
+            var storedFileSize = await ExecuteScalarAsync<long>(database.ConnectionString, "SELECT FileSize FROM Books;");
+            var storedContentHash = await ExecuteScalarAsync<string>(database.ConnectionString, "SELECT ContentHash FROM Books;");
+
+            Assert.Equal(firstId, secondId);
+            Assert.Equal(1L, rowCount);
+            Assert.Equal("Updated title", storedTitle);
+            Assert.Equal("Series B", storedSeries);
+            Assert.Equal(createdAt.ToString("O"), storedCreatedAt);
+            Assert.Equal(finalUpdatedAt.ToString("O"), storedUpdatedAt);
+            Assert.Equal("updated.fb2", storedFileName);
+            Assert.Equal(222L, storedFileSize);
+            Assert.Equal("hash-2", storedContentHash);
+        }
+        finally
+        {
+            database.Dispose();
+        }
+    }
+
+    [Fact]
     public async Task ResolveAsync_ReturnsOnlineApiStructure()
     {
         var resolver = new LibrarySourceResolver(CreateOnlineEnvironment());
@@ -163,6 +302,73 @@ public sealed class SqliteLibraryRepositoryTests
         var initializer = new SqliteSchemaInitializer(connectionString);
         await initializer.InitializeAsync();
         return new TestDatabase(dbPath, connectionString);
+    }
+
+    private static async Task<HashSet<string>> GetTableColumnsAsync(string connectionString, string tableName)
+    {
+        var columns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        await using var connection = new SqliteConnection(connectionString);
+        await connection.OpenAsync();
+
+        await using var command = connection.CreateCommand();
+        command.CommandText = $"PRAGMA table_info({tableName});";
+
+        await using var reader = await command.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
+        {
+            columns.Add(reader.GetString(1));
+        }
+
+        return columns;
+    }
+
+    private static async Task InsertBookRowAsync(
+        SqliteConnection connection,
+        long libraryProfileId,
+        string archivePath,
+        string entryPath,
+        string title)
+    {
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+                              INSERT INTO Books(
+                                  LibraryProfileId,
+                                  Title,
+                                  PrimaryFormat,
+                                  ArchivePath,
+                                  EntryPath,
+                                  CreatedAt,
+                                  UpdatedAt)
+                              VALUES (
+                                  $libraryProfileId,
+                                  $title,
+                                  $primaryFormat,
+                                  $archivePath,
+                                  $entryPath,
+                                  $createdAt,
+                                  $updatedAt);
+                              """;
+        command.Parameters.AddWithValue("$libraryProfileId", libraryProfileId);
+        command.Parameters.AddWithValue("$title", title);
+        command.Parameters.AddWithValue("$primaryFormat", (int)FileFormat.Fb2);
+        command.Parameters.AddWithValue("$archivePath", archivePath);
+        command.Parameters.AddWithValue("$entryPath", entryPath);
+        command.Parameters.AddWithValue("$createdAt", DateTimeOffset.UtcNow.ToString("O"));
+        command.Parameters.AddWithValue("$updatedAt", DateTimeOffset.UtcNow.ToString("O"));
+        await command.ExecuteNonQueryAsync();
+    }
+
+    private static async Task<T> ExecuteScalarAsync<T>(string connectionString, string sql)
+    {
+        await using var connection = new SqliteConnection(connectionString);
+        await connection.OpenAsync();
+
+        await using var command = connection.CreateCommand();
+        command.CommandText = sql;
+
+        var result = await command.ExecuteScalarAsync();
+        return (T)Convert.ChangeType(result!, typeof(T));
     }
 
     private static LibraryProfile CreateOnlineProfile()

@@ -107,6 +107,93 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
         return Convert.ToInt64(id);
     }
 
+    public async Task<long> UpsertImportedBookAsync(BookImportRecord book, CancellationToken cancellationToken = default)
+    {
+        ValidateImportedBook(book);
+
+        await using var connection = new SqliteConnection(_connectionString);
+        await connection.OpenAsync(cancellationToken);
+
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+                              INSERT INTO Books(
+                                  LibraryProfileId,
+                                  Title,
+                                  Annotation,
+                                  PublishYear,
+                                  PrimaryFormat,
+                                  Series,
+                                  SeriesNumber,
+                                  Genres,
+                                  Language,
+                                  ArchivePath,
+                                  EntryPath,
+                                  FileName,
+                                  FileSize,
+                                  ContentHash,
+                                  CoverThumbnail,
+                                  CreatedAt,
+                                  UpdatedAt)
+                              VALUES (
+                                  $libraryProfileId,
+                                  $title,
+                                  $annotation,
+                                  $publishYear,
+                                  $primaryFormat,
+                                  $series,
+                                  $seriesNumber,
+                                  $genres,
+                                  $language,
+                                  $archivePath,
+                                  $entryPath,
+                                  $fileName,
+                                  $fileSize,
+                                  $contentHash,
+                                  $coverThumbnail,
+                                  $createdAt,
+                                  $updatedAt)
+                              ON CONFLICT(LibraryProfileId, ArchivePath, EntryPath) DO UPDATE SET
+                                  Title = excluded.Title,
+                                  Annotation = excluded.Annotation,
+                                  PublishYear = excluded.PublishYear,
+                                  PrimaryFormat = excluded.PrimaryFormat,
+                                  Series = excluded.Series,
+                                  SeriesNumber = excluded.SeriesNumber,
+                                  Genres = excluded.Genres,
+                                  Language = excluded.Language,
+                                  FileName = excluded.FileName,
+                                  FileSize = excluded.FileSize,
+                                  ContentHash = excluded.ContentHash,
+                                  CoverThumbnail = excluded.CoverThumbnail,
+                                  UpdatedAt = excluded.UpdatedAt;
+                              SELECT Id
+                              FROM Books
+                              WHERE LibraryProfileId = $libraryProfileId
+                                AND ArchivePath = $archivePath
+                                AND EntryPath = $entryPath;
+                              """;
+        command.Parameters.AddWithValue("$libraryProfileId", book.LibraryProfileId);
+        command.Parameters.AddWithValue("$title", book.Title);
+        command.Parameters.AddWithValue("$annotation", book.Annotation ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("$publishYear", book.PublishYear ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("$primaryFormat", (int)book.PrimaryFormat);
+        command.Parameters.AddWithValue("$series", book.Series ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("$seriesNumber", book.SeriesNumber ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("$genres", book.Genres ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("$language", book.Language ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("$archivePath", book.ArchivePath);
+        command.Parameters.AddWithValue("$entryPath", book.EntryPath);
+        command.Parameters.AddWithValue("$fileName", book.FileName ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("$fileSize", book.FileSize ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("$contentHash", book.ContentHash ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("$coverThumbnail", book.CoverThumbnail ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("$createdAt", book.CreatedAt.ToString("O"));
+        command.Parameters.AddWithValue("$updatedAt", book.UpdatedAt.ToString("O"));
+
+        var id = await command.ExecuteScalarAsync(cancellationToken);
+        return Convert.ToInt64(id);
+    }
+
     public async Task DeleteAsync(long libraryId, CancellationToken cancellationToken = default)
     {
         await using var connection = new SqliteConnection(_connectionString);
@@ -182,6 +269,29 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
                 throw new InvalidOperationException("Folder library profiles require an INPX file path.");
             case LibraryType.Folder when string.IsNullOrWhiteSpace(profile.FolderSource.ArchiveDirectoryPath):
                 throw new InvalidOperationException("Folder library profiles require an archive directory path.");
+        }
+    }
+
+    private static void ValidateImportedBook(BookImportRecord book)
+    {
+        if (book.LibraryProfileId <= 0)
+        {
+            throw new InvalidOperationException("Imported books require a valid library profile ID.");
+        }
+
+        if (string.IsNullOrWhiteSpace(book.Title))
+        {
+            throw new InvalidOperationException("Imported books require a title.");
+        }
+
+        if (string.IsNullOrWhiteSpace(book.ArchivePath))
+        {
+            throw new InvalidOperationException("Imported books require an archive path.");
+        }
+
+        if (string.IsNullOrWhiteSpace(book.EntryPath))
+        {
+            throw new InvalidOperationException("Imported books require an archive entry path.");
         }
     }
 
