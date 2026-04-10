@@ -14,7 +14,7 @@ public sealed class BookListItemViewModel
     private bool ActiveLibraryHasSourceIssues { get; }
     public string Title => Book.Title;
     public string AuthorsLine => Book.Authors.Count == 0 ? "Unknown author" : string.Join(", ", Book.Authors);
-    public string? SeriesLine => null;
+    public string? SeriesLine => Book.Series;
     public bool HasSeries => !string.IsNullOrWhiteSpace(SeriesLine);
     public string GenreLine => Book.Subjects.Count == 0 ? "General catalog" : string.Join(", ", Book.Subjects.Take(2));
     public bool HasGenre => Book.Subjects.Count > 0;

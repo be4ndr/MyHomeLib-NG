@@ -58,6 +58,7 @@ public sealed class SqliteSchemaInitializer
                                Id INTEGER PRIMARY KEY AUTOINCREMENT,
                                LibraryProfileId INTEGER NOT NULL,
                                Title TEXT NOT NULL,
+                               Authors TEXT NULL,
                                Annotation TEXT NULL,
                                PublishYear INTEGER NULL,
                                PrimaryFormat INTEGER NOT NULL,
@@ -80,6 +81,7 @@ public sealed class SqliteSchemaInitializer
 
         await EnsureColumnAsync(connection, "Books", "LibraryProfileId", "INTEGER NOT NULL DEFAULT 0", cancellationToken);
         await EnsureColumnAsync(connection, "Books", "Title", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+        await EnsureColumnAsync(connection, "Books", "Authors", "TEXT NULL", cancellationToken);
         await EnsureColumnAsync(connection, "Books", "Annotation", "TEXT NULL", cancellationToken);
         await EnsureColumnAsync(connection, "Books", "PublishYear", "INTEGER NULL", cancellationToken);
         await EnsureColumnAsync(connection, "Books", "PrimaryFormat", "INTEGER NOT NULL DEFAULT 0", cancellationToken);

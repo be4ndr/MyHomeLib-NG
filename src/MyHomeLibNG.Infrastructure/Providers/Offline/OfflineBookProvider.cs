@@ -102,6 +102,8 @@ public sealed class OfflineBookProvider : IBookProvider
         return book.Title.Contains(query, StringComparison.OrdinalIgnoreCase) ||
                book.SourceId.Contains(query, StringComparison.OrdinalIgnoreCase) ||
                book.Authors.Any(author => author.Contains(query, StringComparison.OrdinalIgnoreCase)) ||
-               book.Subjects.Any(subject => subject.Contains(query, StringComparison.OrdinalIgnoreCase));
+               (!string.IsNullOrWhiteSpace(book.Series) && book.Series.Contains(query, StringComparison.OrdinalIgnoreCase)) ||
+               book.Subjects.Any(subject => subject.Contains(query, StringComparison.OrdinalIgnoreCase)) ||
+               (!string.IsNullOrWhiteSpace(book.Description) && book.Description.Contains(query, StringComparison.OrdinalIgnoreCase));
     }
 }

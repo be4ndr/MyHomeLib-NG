@@ -5,6 +5,7 @@ public sealed class BookDetails
     public string Title { get; init; } = string.Empty;
     public BookSourceDescriptor Source { get; init; } = new();
     public IReadOnlyList<string> Authors { get; init; } = Array.Empty<string>();
+    public string? Series { get; init; }
     public string? Language { get; init; }
     public string? Description { get; init; }
     public IReadOnlyList<string> Subjects { get; init; } = Array.Empty<string>();

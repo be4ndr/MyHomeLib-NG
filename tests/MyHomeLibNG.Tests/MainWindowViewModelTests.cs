@@ -26,7 +26,7 @@ public sealed class MainWindowViewModelTests
             new FakeLibrarySourceResolver());
 
         await viewModel.InitializeAsync();
-        viewModel.SearchQuery = "alpha";
+        viewModel.SearchQuery = "Ada";
         await viewModel.SearchAsync();
         await viewModel.OpenDirectoryModeAsync();
 
@@ -50,6 +50,54 @@ public sealed class MainWindowViewModelTests
         Assert.Null(viewModel.SelectedBook);
         Assert.Null(viewModel.SelectedBookDetails);
         Assert.False(activeLibraryContext.HasActiveLibrary);
+    }
+
+    [Theory]
+    [InlineData("Ada Author", "author-match")]
+    [InlineData("Chronicles", "series-match")]
+    [InlineData("Fantasy", "genre-match")]
+    [InlineData("secret annotation", "annotation-match")]
+    public async Task SearchAsync_KeywordSearchMatchesExpandedMetadataFields(string query, string expectedSourceId)
+    {
+        var profile = CreateOnlineProfile(7, "Expanded Search");
+        var repository = new FakeLibraryRepository(profile);
+        var activeLibraryContext = new ActiveLibraryContext(repository);
+        var viewModel = new MainWindowViewModel(
+            new LibraryProfilesService(repository),
+            new LibraryBooksService(new FakeBookProviderFactory(new FakeBookProvider()), activeLibraryContext),
+            activeLibraryContext,
+            repository,
+            new FakeLibrarySourceResolver());
+
+        await viewModel.InitializeAsync();
+        viewModel.SearchQuery = query;
+
+        await viewModel.SearchAsync();
+
+        var result = Assert.Single(viewModel.Results);
+        Assert.Equal(expectedSourceId, result.Book.Source.SourceId);
+    }
+
+    [Fact]
+    public async Task SearchAsync_SeriesFilterUsesSeriesMetadata()
+    {
+        var profile = CreateOnlineProfile(8, "Series Search");
+        var repository = new FakeLibraryRepository(profile);
+        var activeLibraryContext = new ActiveLibraryContext(repository);
+        var viewModel = new MainWindowViewModel(
+            new LibraryProfilesService(repository),
+            new LibraryBooksService(new FakeBookProviderFactory(new FakeBookProvider()), activeLibraryContext),
+            activeLibraryContext,
+            repository,
+            new FakeLibrarySourceResolver());
+
+        await viewModel.InitializeAsync();
+        viewModel.SearchSeries = "Chronicles";
+
+        await viewModel.SearchAsync();
+
+        var result = Assert.Single(viewModel.Results);
+        Assert.Equal("series-match", result.Book.Source.SourceId);
     }
 
     private static LibraryProfile CreateOnlineProfile(long id, string name)
@@ -172,31 +220,58 @@ public sealed class MainWindowViewModelTests
     {
         private readonly Dictionary<string, NormalizedBook> _books = new(StringComparer.Ordinal)
         {
-            ["alpha-1"] = new()
+            ["author-match"] = new()
             {
-                Title = "Alpha Book",
+                Title = "Plain Title",
                 Source = "Project Gutenberg",
-                SourceId = "alpha-1",
+                SourceId = "author-match",
                 Authors = ["Ada Author"],
-                Description = "Alpha description",
+                Description = "Author-only match",
                 Formats = ["epub"],
-                Subjects = ["Fiction"],
+                Subjects = ["Reference"],
                 Language = "en",
                 PublishedYear = 2024,
-                ReadLink = "https://example.test/books/alpha-1"
+                ReadLink = "https://example.test/books/author-match"
             },
-            ["alpha-2"] = new()
+            ["series-match"] = new()
             {
-                Title = "Alpha Series: Volume 2",
+                Title = "Volume 2",
                 Source = "Project Gutenberg",
-                SourceId = "alpha-2",
-                Authors = ["Ada Author"],
-                Description = "Second alpha description",
+                SourceId = "series-match",
+                Authors = ["Series Writer"],
+                Series = "Chronicles",
+                Description = "Series-only match",
                 Formats = ["epub"],
-                Subjects = ["Fiction"],
+                Subjects = ["Reference"],
                 Language = "en",
                 PublishedYear = 2025,
-                ReadLink = "https://example.test/books/alpha-2"
+                ReadLink = "https://example.test/books/series-match"
+            },
+            ["genre-match"] = new()
+            {
+                Title = "Genre Atlas",
+                Source = "Project Gutenberg",
+                SourceId = "genre-match",
+                Authors = ["Genre Writer"],
+                Description = "Genre-only match",
+                Formats = ["epub"],
+                Subjects = ["Fantasy"],
+                Language = "en",
+                PublishedYear = 2023,
+                ReadLink = "https://example.test/books/genre-match"
+            },
+            ["annotation-match"] = new()
+            {
+                Title = "Annotation Atlas",
+                Source = "Project Gutenberg",
+                SourceId = "annotation-match",
+                Authors = ["Annotation Writer"],
+                Description = "Contains a secret annotation token.",
+                Formats = ["epub"],
+                Subjects = ["Reference"],
+                Language = "en",
+                PublishedYear = 2022,
+                ReadLink = "https://example.test/books/annotation-match"
             }
         };
 

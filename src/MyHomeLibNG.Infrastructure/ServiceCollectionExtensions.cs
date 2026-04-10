@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using MyHomeLibNG.Core.Interfaces;
 using MyHomeLibNG.Infrastructure.Data;
+using MyHomeLibNG.Infrastructure.Import;
 using MyHomeLibNG.Infrastructure.Providers;
 using MyHomeLibNG.Infrastructure.Providers.Offline;
 using MyHomeLibNG.Infrastructure.Providers.Online;
@@ -49,6 +50,7 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<ILibraryRepository>(_ => new SqliteLibraryRepository(connectionString));
         services.AddSingleton<TransientHttpExecutor>();
+        services.AddSingleton<IFb2MetadataParser, Fb2MetadataParser>();
         services.AddSingleton<IInpxCatalogParser, InpxCatalogParser>();
         services.AddSingleton<IOfflineCatalogCache, OfflineCatalogCache>();
         services.AddSingleton<IOfflineLibraryFileSystem, OfflineLibraryFileSystem>();
@@ -56,6 +58,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IOfflineContentStorage, FileSystemContentStorage>();
         services.AddSingleton<IOfflineContentStorage, ZipContentStorage>();
         services.AddSingleton<OfflineContentStorageRegistry>();
+        services.AddSingleton<IZipArchiveScanner, ZipArchiveScanner>();
         services.AddSingleton<IBookProviderRegistration, OfflineBookProviderRegistration>();
         services.AddSingleton<IBookProviderRegistration, ProjectGutenbergBookProviderRegistration>();
         services.AddSingleton<IBookProviderRegistration, OpenLibraryBookProviderRegistration>();

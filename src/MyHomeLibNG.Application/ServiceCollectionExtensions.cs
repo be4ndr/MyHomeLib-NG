@@ -9,6 +9,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IActiveLibraryContext, ActiveLibraryContext>();
         services.AddSingleton<LibraryProfilesService>();
         services.AddSingleton<LibraryBooksService>();
+        services.AddSingleton<BookImportService>();
         return services;
     }
 }
