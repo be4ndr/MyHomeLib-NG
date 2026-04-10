@@ -341,8 +341,10 @@ public sealed class MainWindowViewModel : ObservableObject
     public bool CanBrowseResults => !IsBusy && HasResults;
     public bool HasLibraries => Libraries.Count > 0;
     public bool HasSelectedLibrary => SelectedLibrary is not null;
+    public bool HasSelectedOfflineLibrary => SelectedLibrary?.Profile.LibraryType == LibraryType.Folder;
     public bool HasResults => Results.Count > 0;
     public bool HasSelectedBook => SelectedBookDetails is not null;
+    public bool CanScanSelectedLibrary => !IsBusy && HasSelectedOfflineLibrary;
     public bool IsLibrariesMode => CurrentMode == AppMode.Libraries;
     public bool IsSearchMode => CurrentMode == AppMode.Search;
     public bool IsDirectoryMode => CurrentMode == AppMode.Directory;
@@ -763,6 +765,7 @@ public sealed class MainWindowViewModel : ObservableObject
             Isbn10 = result.Isbn10,
             Isbn13 = result.Isbn13,
             CoverUrl = result.CoverUrl,
+            CoverThumbnail = result.CoverThumbnail,
             Formats = result.Formats,
             DownloadLinks = result.DownloadLinks,
             ReadLink = result.ReadLink,
@@ -843,8 +846,10 @@ public sealed class MainWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(CanBrowseResults));
         OnPropertyChanged(nameof(HasLibraries));
         OnPropertyChanged(nameof(HasSelectedLibrary));
+        OnPropertyChanged(nameof(HasSelectedOfflineLibrary));
         OnPropertyChanged(nameof(HasResults));
         OnPropertyChanged(nameof(HasSelectedBook));
+        OnPropertyChanged(nameof(CanScanSelectedLibrary));
         OnPropertyChanged(nameof(IsLibrariesMode));
         OnPropertyChanged(nameof(IsSearchMode));
         OnPropertyChanged(nameof(IsDirectoryMode));

@@ -5,6 +5,8 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Microsoft.Extensions.DependencyInjection;
 using MyHomeLibNG.App.ViewModels;
+using MyHomeLibNG.Application;
+using MyHomeLibNG.Core.Enums;
 using MyHomeLibNG.App.Views;
 using MyHomeLibNG.Core.Models;
 
@@ -81,6 +83,11 @@ public partial class MainWindow : Window
         }
 
         await _viewModel.AddLibraryAsync(profile);
+
+        if (profile.LibraryType == LibraryType.Folder && _viewModel.SelectedLibrary?.Profile is { } savedProfile)
+        {
+            await HandleScanLocalClickedAsync(savedProfile);
+        }
     }
 
     internal async Task HandleDeleteLibraryClickedAsync(LibraryProfileItemViewModel library)
@@ -159,6 +166,33 @@ public partial class MainWindow : Window
     internal async Task HandleDirectoryModeClickedAsync()
     {
         await _viewModel.OpenDirectoryModeAsync();
+    }
+
+    internal Task HandleScanLocalClickedAsync()
+    {
+        if (_viewModel.SelectedLibrary?.Profile is not { } profile)
+        {
+            return Task.CompletedTask;
+        }
+
+        return HandleScanLocalClickedAsync(profile);
+    }
+
+    private Task HandleScanLocalClickedAsync(LibraryProfile profile)
+    {
+        try
+        {
+            var coordinator = ((App)Avalonia.Application.Current!).Services.GetRequiredService<LocalLibraryScanCoordinator>();
+            var window = new ScanProgressWindow(new ScanProgressWindowViewModel(coordinator, profile));
+            window.Show(this);
+            _viewModel.ReportActionSuccess($"Started background scan for {profile.Name}.");
+        }
+        catch (Exception exception)
+        {
+            _viewModel.ReportActionFailure(exception.Message);
+        }
+
+        return Task.CompletedTask;
     }
 
     internal void HandleClearSearchFiltersClicked()
@@ -290,6 +324,11 @@ public partial class MainWindow : Window
     private async void OnDirectoryModeClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         await HandleDirectoryModeClickedAsync();
+    }
+
+    private async void OnScanLocalClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        await HandleScanLocalClickedAsync();
     }
 
     private void OnClearSearchFiltersClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)

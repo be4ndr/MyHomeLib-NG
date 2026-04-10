@@ -14,6 +14,7 @@ public sealed class BookDetails
     public string? Isbn10 { get; init; }
     public string? Isbn13 { get; init; }
     public string? CoverUrl { get; init; }
+    public byte[]? CoverThumbnail { get; init; }
     public IReadOnlyList<string> Formats { get; init; } = Array.Empty<string>();
     public IReadOnlyList<BookDownloadLink> DownloadLinks { get; init; } = Array.Empty<BookDownloadLink>();
     public string? ReadLink { get; init; }
