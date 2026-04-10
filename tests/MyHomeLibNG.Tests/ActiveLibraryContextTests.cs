@@ -85,6 +85,9 @@ public sealed class ActiveLibraryContextTests
             return Task.FromResult(profile.Id);
         }
 
+        public Task<long> UpsertImportedBookAsync(BookImportRecord book, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
         public Task DeleteAsync(long libraryId, CancellationToken cancellationToken = default)
         {
             _profiles.Remove(libraryId);
