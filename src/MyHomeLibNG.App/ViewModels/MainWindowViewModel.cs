@@ -754,6 +754,7 @@ public sealed class MainWindowViewModel : ObservableObject
             Title = result.Title,
             Source = result.Source,
             Authors = result.Authors,
+            Series = result.Series,
             Language = result.Language,
             Description = result.Description,
             Subjects = result.Subjects,
@@ -933,7 +934,7 @@ public sealed class MainWindowViewModel : ObservableObject
 
     private bool MatchesStructuredSearch(BookSearchResult result, SearchRequest request)
     {
-        if (!SearchTextNormalizer.MatchesValue(result.Title, request.Query, request.ExactMatch, ignoreLeadingArticles: true))
+        if (!MatchesKeyword(result, request.Query, request.ExactMatch))
         {
             return false;
         }
@@ -1005,11 +1006,31 @@ public sealed class MainWindowViewModel : ObservableObject
 
         if (SearchTextNormalizer.IsDigitBucketToken(filter))
         {
-            return SearchTextNormalizer.StartsWithDigit(result.Title, ignoreLeadingArticles: true);
+            return SearchTextNormalizer.StartsWithDigit(result.Series, ignoreLeadingArticles: true);
         }
 
-        // Series metadata is not indexed yet; title is the least surprising temporary fallback.
-        return SearchTextNormalizer.MatchesValue(result.Title, filter, exactMatch, ignoreLeadingArticles: true);
+        return SearchTextNormalizer.MatchesValue(result.Series, filter, exactMatch, ignoreLeadingArticles: true);
+    }
+
+    private static bool MatchesKeyword(BookSearchResult result, string? filter, bool exactMatch)
+    {
+        if (string.IsNullOrWhiteSpace(filter) || SearchTextNormalizer.IsMatchAllToken(filter))
+        {
+            return true;
+        }
+
+        if (SearchTextNormalizer.IsDigitBucketToken(filter))
+        {
+            return SearchTextNormalizer.StartsWithDigit(result.Title, ignoreLeadingArticles: true) ||
+                   result.Authors.Any(author => SearchTextNormalizer.StartsWithDigit(author)) ||
+                   SearchTextNormalizer.StartsWithDigit(result.Series, ignoreLeadingArticles: true);
+        }
+
+        return SearchTextNormalizer.MatchesValue(result.Title, filter, exactMatch, ignoreLeadingArticles: true) ||
+               MatchesAny(result.Authors, filter, exactMatch) ||
+               SearchTextNormalizer.MatchesValue(result.Series, filter, exactMatch, ignoreLeadingArticles: true) ||
+               MatchesAny(result.Subjects, filter, exactMatch) ||
+               SearchTextNormalizer.MatchesValue(result.Description, filter, exactMatch);
     }
 
     private static bool MatchesYear(int? publishedYear, string? filter)
@@ -1337,25 +1358,7 @@ public sealed class MainWindowViewModel : ObservableObject
 
     private static IReadOnlyList<string> GetSeriesValues(BookSearchResult book)
     {
-        var inferredSeries = InferSeriesName(book.Title);
-        return inferredSeries is null ? ["Standalone / uncategorized"] : [inferredSeries];
-    }
-
-    private static string? InferSeriesName(string? title)
-    {
-        if (string.IsNullOrWhiteSpace(title))
-        {
-            return null;
-        }
-
-        var trimmed = title.Trim();
-        var colonIndex = trimmed.IndexOf(':');
-        if (colonIndex > 1 && colonIndex < trimmed.Length - 2)
-        {
-            return trimmed[..colonIndex].Trim();
-        }
-
-        return null;
+        return string.IsNullOrWhiteSpace(book.Series) ? ["Standalone / uncategorized"] : [book.Series!];
     }
 
     private static void SyncCollection<T>(ObservableCollection<T> target, IReadOnlyList<T> source)

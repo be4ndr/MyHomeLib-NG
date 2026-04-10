@@ -134,6 +134,7 @@ public sealed class SqliteLibraryRepositoryTests
 
             Assert.Contains("LibraryProfileId", columns);
             Assert.Contains("Title", columns);
+            Assert.Contains("Authors", columns);
             Assert.Contains("Annotation", columns);
             Assert.Contains("PublishYear", columns);
             Assert.Contains("PrimaryFormat", columns);
@@ -198,6 +199,7 @@ public sealed class SqliteLibraryRepositoryTests
             {
                 LibraryProfileId = 23,
                 Title = "Original title",
+                Authors = "Author One",
                 Annotation = "Original annotation",
                 PublishYear = 2001,
                 PrimaryFormat = FileFormat.Fb2,
@@ -219,6 +221,7 @@ public sealed class SqliteLibraryRepositoryTests
             {
                 LibraryProfileId = 23,
                 Title = "Updated title",
+                Authors = "Author Two",
                 Annotation = "Updated annotation",
                 PublishYear = 2002,
                 PrimaryFormat = FileFormat.Fb2,
@@ -238,6 +241,7 @@ public sealed class SqliteLibraryRepositoryTests
 
             var rowCount = await ExecuteScalarAsync<long>(database.ConnectionString, "SELECT COUNT(*) FROM Books;");
             var storedTitle = await ExecuteScalarAsync<string>(database.ConnectionString, "SELECT Title FROM Books;");
+            var storedAuthors = await ExecuteScalarAsync<string>(database.ConnectionString, "SELECT Authors FROM Books;");
             var storedSeries = await ExecuteScalarAsync<string>(database.ConnectionString, "SELECT Series FROM Books;");
             var storedCreatedAt = await ExecuteScalarAsync<string>(database.ConnectionString, "SELECT CreatedAt FROM Books;");
             var storedUpdatedAt = await ExecuteScalarAsync<string>(database.ConnectionString, "SELECT UpdatedAt FROM Books;");
@@ -248,6 +252,7 @@ public sealed class SqliteLibraryRepositoryTests
             Assert.Equal(firstId, secondId);
             Assert.Equal(1L, rowCount);
             Assert.Equal("Updated title", storedTitle);
+            Assert.Equal("Author Two", storedAuthors);
             Assert.Equal("Series B", storedSeries);
             Assert.Equal(createdAt.ToString("O"), storedCreatedAt);
             Assert.Equal(finalUpdatedAt.ToString("O"), storedUpdatedAt);

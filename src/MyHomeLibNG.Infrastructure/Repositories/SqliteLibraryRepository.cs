@@ -119,6 +119,7 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
                               INSERT INTO Books(
                                   LibraryProfileId,
                                   Title,
+                                  Authors,
                                   Annotation,
                                   PublishYear,
                                   PrimaryFormat,
@@ -137,6 +138,7 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
                               VALUES (
                                   $libraryProfileId,
                                   $title,
+                                  $authors,
                                   $annotation,
                                   $publishYear,
                                   $primaryFormat,
@@ -154,6 +156,7 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
                                   $updatedAt)
                               ON CONFLICT(LibraryProfileId, ArchivePath, EntryPath) DO UPDATE SET
                                   Title = excluded.Title,
+                                  Authors = excluded.Authors,
                                   Annotation = excluded.Annotation,
                                   PublishYear = excluded.PublishYear,
                                   PrimaryFormat = excluded.PrimaryFormat,
@@ -174,6 +177,7 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
                               """;
         command.Parameters.AddWithValue("$libraryProfileId", book.LibraryProfileId);
         command.Parameters.AddWithValue("$title", book.Title);
+        command.Parameters.AddWithValue("$authors", book.Authors ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("$annotation", book.Annotation ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("$publishYear", book.PublishYear ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("$primaryFormat", (int)book.PrimaryFormat);

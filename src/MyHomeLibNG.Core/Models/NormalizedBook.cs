@@ -6,6 +6,7 @@ public sealed class NormalizedBook
     public string Source { get; init; } = string.Empty;
     public string SourceId { get; init; } = string.Empty;
     public IReadOnlyList<string> Authors { get; init; } = Array.Empty<string>();
+    public string? Series { get; init; }
     public string? Language { get; init; }
     public string? Description { get; init; }
     public IReadOnlyList<string> Subjects { get; init; } = Array.Empty<string>();
