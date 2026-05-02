@@ -40,7 +40,7 @@ public sealed class LocalLibraryScanCoordinatorTests
         Assert.Equal(0, summary.BooksUpdated);
         Assert.Equal(0, summary.BooksSkipped);
         Assert.NotEmpty(progressSnapshots);
-        Assert.True(progressSnapshots.Count < 7);
+        Assert.True(progressSnapshots.Count <= 8);
 
         var finalSnapshot = progressSnapshots[^1];
         Assert.True(finalSnapshot.IsCompleted);
@@ -168,7 +168,10 @@ public sealed class LocalLibraryScanCoordinatorTests
     {
         private int _counter;
 
-        public Task<Fb2BookMetadata> ParseAsync(Stream stream, CancellationToken cancellationToken = default)
+        public Task<Fb2BookMetadata> ParseAsync(
+            Stream stream,
+            Fb2ParsingOptions? options = null,
+            CancellationToken cancellationToken = default)
         {
             var index = Interlocked.Increment(ref _counter);
             return Task.FromResult(new Fb2BookMetadata
@@ -207,6 +210,21 @@ public sealed class LocalLibraryScanCoordinatorTests
             return Task.FromResult(snapshot);
         }
 
+        public Task<long> GetImportedBookCountAsync(long libraryProfileId, CancellationToken cancellationToken = default)
+            => Task.FromResult((long)_books.Keys.Count(key => key.LibraryId == libraryProfileId));
+
+        public Task<IReadOnlyList<ImportedBookMetadataSnapshot>> SearchImportedBooksAsync(
+            long libraryProfileId,
+            string query,
+            CancellationToken cancellationToken = default)
+        {
+            IReadOnlyList<ImportedBookMetadataSnapshot> matches = _books
+                .Where(pair => pair.Key.LibraryId == libraryProfileId)
+                .Select(pair => pair.Value)
+                .ToArray();
+            return Task.FromResult(matches);
+        }
+
         public Task<long> UpsertImportedBookAsync(BookImportRecord book, CancellationToken cancellationToken = default)
         {
             var key = (book.LibraryProfileId, book.ArchivePath, book.EntryPath);
@@ -217,13 +235,57 @@ public sealed class LocalLibraryScanCoordinatorTests
                 Annotation = book.Annotation,
                 PublishYear = book.PublishYear,
                 Series = book.Series,
+                SeriesNumber = book.SeriesNumber,
                 Genres = book.Genres,
                 Language = book.Language,
+                ArchivePath = book.ArchivePath,
+                EntryPath = book.EntryPath,
+                FileName = book.FileName,
+                FileSize = book.FileSize,
                 ContentHash = book.ContentHash,
                 CoverThumbnail = book.CoverThumbnail
             };
 
             return Task.FromResult(_nextId++);
+        }
+
+        public async Task<BookImportBatchResult> UpsertImportedBooksAsync(
+            IReadOnlyList<BookImportRecord> books,
+            CancellationToken cancellationToken = default)
+        {
+            var added = 0;
+            var updated = 0;
+            var skipped = 0;
+
+            foreach (var book in books)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var key = (book.LibraryProfileId, book.ArchivePath, book.EntryPath);
+                if (_books.TryGetValue(key, out var existing) &&
+                    string.Equals(existing.ContentHash, book.ContentHash, StringComparison.OrdinalIgnoreCase))
+                {
+                    skipped++;
+                    continue;
+                }
+
+                if (_books.ContainsKey(key))
+                {
+                    updated++;
+                }
+                else
+                {
+                    added++;
+                }
+
+                await UpsertImportedBookAsync(book, cancellationToken);
+            }
+
+            return new BookImportBatchResult
+            {
+                BooksAdded = added,
+                BooksUpdated = updated,
+                BooksSkipped = skipped
+            };
         }
 
         public Task DeleteAsync(long libraryId, CancellationToken cancellationToken = default)

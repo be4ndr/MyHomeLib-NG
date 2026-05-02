@@ -114,6 +114,7 @@ public sealed class LocalLibraryScanCoordinator
 
     private sealed class ProgressState
     {
+        private readonly object _sync = new();
         private readonly IProgress<LocalLibraryScanProgress>? _progress;
         private readonly TimeProvider _timeProvider;
         private readonly TimeSpan _progressInterval;
@@ -142,30 +143,41 @@ public sealed class LocalLibraryScanCoordinator
 
         public void SetArchivesTotal(int value)
         {
-            _archivesTotal = value;
-            EnqueueLogLine($"Discovered {ArchivesTotal} archive{(ArchivesTotal == 1 ? string.Empty : "s")} to scan.");
+            lock (_sync)
+            {
+                _archivesTotal = value;
+                EnqueueLogLine($"Discovered {ArchivesTotal} archive{(ArchivesTotal == 1 ? string.Empty : "s")} to scan.");
+            }
+
             Report(force: true);
         }
 
         public void ReportInitial()
         {
-            EnqueueLogLine("Queued scan.");
+            lock (_sync)
+            {
+                EnqueueLogLine("Queued scan.");
+            }
+
             Report(force: true);
         }
 
         public void HandleUpdate(BookImportProgressUpdate update)
         {
-            _currentArchive = update.CurrentArchive;
-            _archivesProcessed = update.ArchivesProcessed;
-            _booksFound = update.BooksFound;
-            _booksAdded = update.BooksAdded;
-            _booksUpdated = update.BooksUpdated;
-            _booksSkipped = update.BooksSkipped;
-            _errorsCount = update.ErrorsCount;
-
-            if (!string.IsNullOrWhiteSpace(update.LogLine))
+            lock (_sync)
             {
-                EnqueueLogLine(update.LogLine!);
+                _currentArchive = update.CurrentArchive;
+                _archivesProcessed = update.ArchivesProcessed;
+                _booksFound = update.BooksFound;
+                _booksAdded = update.BooksAdded;
+                _booksUpdated = update.BooksUpdated;
+                _booksSkipped = update.BooksSkipped;
+                _errorsCount = update.ErrorsCount;
+
+                if (!string.IsNullOrWhiteSpace(update.LogLine))
+                {
+                    EnqueueLogLine(update.LogLine!);
+                }
             }
 
             Report(update.IsImportant || update.IsCompleted);
@@ -173,19 +185,27 @@ public sealed class LocalLibraryScanCoordinator
 
         public void ReportCompleted(BookImportSummary summary)
         {
-            _archivesProcessed = Math.Max(_archivesProcessed, ArchivesTotal > 0 ? ArchivesTotal : summary.ArchivesScanned);
-            _booksFound = summary.BooksFound;
-            _booksAdded = summary.BooksAdded;
-            _booksUpdated = summary.BooksUpdated;
-            _booksSkipped = summary.BooksSkipped;
-            _errorsCount = summary.ErrorsCount;
-            EnqueueLogLine($"Scan finished. Added {_booksAdded}, updated {_booksUpdated}, skipped {_booksSkipped}.");
+            lock (_sync)
+            {
+                _archivesProcessed = Math.Max(_archivesProcessed, ArchivesTotal > 0 ? ArchivesTotal : summary.ArchivesScanned);
+                _booksFound = summary.BooksFound;
+                _booksAdded = summary.BooksAdded;
+                _booksUpdated = summary.BooksUpdated;
+                _booksSkipped = summary.BooksSkipped;
+                _errorsCount = summary.ErrorsCount;
+                EnqueueLogLine($"Scan finished. Added {_booksAdded}, updated {_booksUpdated}, skipped {_booksSkipped}.");
+            }
+
             Report(force: true, isCompleted: true);
         }
 
         public void ReportCancelled()
         {
-            EnqueueLogLine("Scan cancelled.");
+            lock (_sync)
+            {
+                EnqueueLogLine("Scan cancelled.");
+            }
+
             Report(force: true, isCancelled: true);
         }
 
@@ -196,29 +216,35 @@ public sealed class LocalLibraryScanCoordinator
                 return;
             }
 
-            var now = _timeProvider.GetUtcNow();
-            if (!force &&
-                _lastReportedAt != DateTimeOffset.MinValue &&
-                now - _lastReportedAt < _progressInterval)
+            LocalLibraryScanProgress snapshot;
+            lock (_sync)
             {
-                return;
+                var now = _timeProvider.GetUtcNow();
+                if (!force &&
+                    _lastReportedAt != DateTimeOffset.MinValue &&
+                    now - _lastReportedAt < _progressInterval)
+                {
+                    return;
+                }
+
+                _lastReportedAt = now;
+                snapshot = new LocalLibraryScanProgress
+                {
+                    CurrentArchive = string.IsNullOrWhiteSpace(_currentArchive) ? null : Path.GetFileName(_currentArchive),
+                    ArchivesProcessed = _archivesProcessed,
+                    ArchivesTotal = ArchivesTotal,
+                    BooksFound = _booksFound,
+                    BooksAdded = _booksAdded,
+                    BooksUpdated = _booksUpdated,
+                    BooksSkipped = _booksSkipped,
+                    ErrorsCount = _errorsCount,
+                    RecentLogLines = _recentLogLines.ToArray(),
+                    IsCompleted = isCompleted,
+                    IsCancelled = isCancelled
+                };
             }
 
-            _lastReportedAt = now;
-            _progress.Report(new LocalLibraryScanProgress
-            {
-                CurrentArchive = string.IsNullOrWhiteSpace(_currentArchive) ? null : Path.GetFileName(_currentArchive),
-                ArchivesProcessed = _archivesProcessed,
-                ArchivesTotal = ArchivesTotal,
-                BooksFound = _booksFound,
-                BooksAdded = _booksAdded,
-                BooksUpdated = _booksUpdated,
-                BooksSkipped = _booksSkipped,
-                ErrorsCount = _errorsCount,
-                RecentLogLines = _recentLogLines.ToArray(),
-                IsCompleted = isCompleted,
-                IsCancelled = isCancelled
-            });
+            _progress.Report(snapshot);
         }
 
         private void EnqueueLogLine(string value)

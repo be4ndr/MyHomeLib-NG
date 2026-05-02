@@ -91,7 +91,21 @@ public sealed class OfflineCatalogCacheTests
             CancellationToken cancellationToken = default)
             => Task.FromResult<MyHomeLibNG.Core.Models.ImportedBookMetadataSnapshot?>(null);
 
+        public Task<long> GetImportedBookCountAsync(long libraryProfileId, CancellationToken cancellationToken = default)
+            => Task.FromResult(0L);
+
+        public Task<IReadOnlyList<MyHomeLibNG.Core.Models.ImportedBookMetadataSnapshot>> SearchImportedBooksAsync(
+            long libraryProfileId,
+            string query,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<MyHomeLibNG.Core.Models.ImportedBookMetadataSnapshot>>(Array.Empty<MyHomeLibNG.Core.Models.ImportedBookMetadataSnapshot>());
+
         public Task<long> UpsertImportedBookAsync(MyHomeLibNG.Core.Models.BookImportRecord book, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<MyHomeLibNG.Core.Models.BookImportBatchResult> UpsertImportedBooksAsync(
+            IReadOnlyList<MyHomeLibNG.Core.Models.BookImportRecord> books,
+            CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
         public Task DeleteAsync(long libraryId, CancellationToken cancellationToken = default)

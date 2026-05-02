@@ -65,8 +65,6 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
-        // ConnectionInfo is kept as a compact legacy summary while the structured
-        // columns carry the real source-specific configuration.
         command.CommandText = """
                               INSERT INTO LibraryProfiles(
                                   Name,
@@ -116,25 +114,10 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
         await using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
-        await using var command = connection.CreateCommand();
-        command.CommandText = """
-                              SELECT Title,
-                                     Authors,
-                                     Annotation,
-                                     PublishYear,
-                                     Series,
-                                     Genres,
-                                     Language,
-                                     ContentHash,
-                                     CoverThumbnail
-                              FROM Books
-                              WHERE LibraryProfileId = $libraryProfileId
-                                AND ArchivePath = $archivePath
-                                AND EntryPath = $entryPath;
-                              """;
-        command.Parameters.AddWithValue("$libraryProfileId", libraryProfileId);
-        command.Parameters.AddWithValue("$archivePath", archivePath);
-        command.Parameters.AddWithValue("$entryPath", entryPath);
+        await using var command = CreateImportedBookSelectByLocationCommand(connection);
+        command.Parameters["$libraryProfileId"].Value = libraryProfileId;
+        command.Parameters["$archivePath"].Value = archivePath;
+        command.Parameters["$entryPath"].Value = entryPath;
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         if (!await reader.ReadAsync(cancellationToken))
@@ -142,18 +125,97 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
             return null;
         }
 
-        return new ImportedBookMetadataSnapshot
+        return ReadImportedBook(reader);
+    }
+
+    public async Task<long> GetImportedBookCountAsync(long libraryProfileId, CancellationToken cancellationToken = default)
+    {
+        await using var connection = new SqliteConnection(_connectionString);
+        await connection.OpenAsync(cancellationToken);
+
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+                              SELECT COUNT(*)
+                              FROM Books
+                              WHERE LibraryProfileId = $libraryProfileId;
+                              """;
+        command.Parameters.AddWithValue("$libraryProfileId", libraryProfileId);
+
+        var result = await command.ExecuteScalarAsync(cancellationToken);
+        return Convert.ToInt64(result, CultureInfo.InvariantCulture);
+    }
+
+    public async Task<IReadOnlyList<ImportedBookMetadataSnapshot>> SearchImportedBooksAsync(
+        long libraryProfileId,
+        string query,
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection = new SqliteConnection(_connectionString);
+        await connection.OpenAsync(cancellationToken);
+
+        await using var command = connection.CreateCommand();
+        var hasQuery = !string.IsNullOrWhiteSpace(query);
+        command.CommandText = hasQuery
+            ? """
+              SELECT Title,
+                     Authors,
+                     Annotation,
+                     PublishYear,
+                     Series,
+                     SeriesNumber,
+                     Genres,
+                     Language,
+                     ArchivePath,
+                     EntryPath,
+                     FileName,
+                     FileSize,
+                     ContentHash,
+                     CoverThumbnail
+              FROM Books
+              WHERE LibraryProfileId = $libraryProfileId
+                AND (
+                    Title LIKE $likeQuery ESCAPE '\'
+                    OR Authors LIKE $likeQuery ESCAPE '\'
+                    OR Series LIKE $likeQuery ESCAPE '\'
+                    OR Genres LIKE $likeQuery ESCAPE '\'
+                    OR Annotation LIKE $likeQuery ESCAPE '\'
+                    OR Language LIKE $likeQuery ESCAPE '\'
+                )
+              ORDER BY Title COLLATE NOCASE, Authors COLLATE NOCASE, EntryPath COLLATE NOCASE;
+              """
+            : """
+              SELECT Title,
+                     Authors,
+                     Annotation,
+                     PublishYear,
+                     Series,
+                     SeriesNumber,
+                     Genres,
+                     Language,
+                     ArchivePath,
+                     EntryPath,
+                     FileName,
+                     FileSize,
+                     ContentHash,
+                     CoverThumbnail
+              FROM Books
+              WHERE LibraryProfileId = $libraryProfileId
+              ORDER BY Title COLLATE NOCASE, Authors COLLATE NOCASE, EntryPath COLLATE NOCASE;
+              """;
+        command.Parameters.AddWithValue("$libraryProfileId", libraryProfileId);
+        if (hasQuery)
         {
-            Title = reader.GetString(0),
-            Authors = GetNullableString(reader, 1),
-            Annotation = GetNullableString(reader, 2),
-            PublishYear = reader.IsDBNull(3) ? null : reader.GetInt32(3),
-            Series = GetNullableString(reader, 4),
-            Genres = GetNullableString(reader, 5),
-            Language = GetNullableString(reader, 6),
-            ContentHash = GetNullableString(reader, 7),
-            CoverThumbnail = reader.IsDBNull(8) ? null : (byte[])reader[8]
-        };
+            command.Parameters.AddWithValue("$likeQuery", BuildLikePattern(query));
+        }
+
+        var results = new List<ImportedBookMetadataSnapshot>();
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            results.Add(ReadImportedBook(reader));
+        }
+
+        return results;
     }
 
     public async Task<long> UpsertImportedBookAsync(BookImportRecord book, CancellationToken cancellationToken = default)
@@ -162,8 +224,201 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
 
         await using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
+        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken);
+
+        await using var upsertCommand = CreateUpsertCommand(connection, transaction);
+        ApplyUpsertParameters(upsertCommand, book);
+        await upsertCommand.ExecuteNonQueryAsync(cancellationToken);
+
+        await using var selectIdCommand = connection.CreateCommand();
+        selectIdCommand.Transaction = transaction;
+        selectIdCommand.CommandText = """
+                                      SELECT Id
+                                      FROM Books
+                                      WHERE LibraryProfileId = $libraryProfileId
+                                        AND ArchivePath = $archivePath
+                                        AND EntryPath = $entryPath;
+                                      """;
+        selectIdCommand.Parameters.AddWithValue("$libraryProfileId", book.LibraryProfileId);
+        selectIdCommand.Parameters.AddWithValue("$archivePath", book.ArchivePath);
+        selectIdCommand.Parameters.AddWithValue("$entryPath", book.EntryPath);
+
+        var id = await selectIdCommand.ExecuteScalarAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return Convert.ToInt64(id, CultureInfo.InvariantCulture);
+    }
+
+    public async Task<BookImportBatchResult> UpsertImportedBooksAsync(
+        IReadOnlyList<BookImportRecord> books,
+        CancellationToken cancellationToken = default)
+    {
+        if (books.Count == 0)
+        {
+            return new BookImportBatchResult();
+        }
+
+        foreach (var book in books)
+        {
+            ValidateImportedBook(book);
+        }
+
+        await using var connection = new SqliteConnection(_connectionString);
+        await connection.OpenAsync(cancellationToken);
+        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken);
+
+        await using var existingHashCommand = connection.CreateCommand();
+        existingHashCommand.Transaction = transaction;
+        existingHashCommand.CommandText = """
+                                          SELECT ContentHash
+                                          FROM Books
+                                          WHERE LibraryProfileId = $libraryProfileId
+                                            AND ArchivePath = $archivePath
+                                            AND EntryPath = $entryPath;
+                                          """;
+        existingHashCommand.Parameters.AddWithValue("$libraryProfileId", 0L);
+        existingHashCommand.Parameters.AddWithValue("$archivePath", string.Empty);
+        existingHashCommand.Parameters.AddWithValue("$entryPath", string.Empty);
+
+        await using var upsertCommand = CreateUpsertCommand(connection, transaction);
+
+        var booksAdded = 0;
+        var booksUpdated = 0;
+        var booksSkipped = 0;
+
+        foreach (var book in books)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            existingHashCommand.Parameters["$libraryProfileId"].Value = book.LibraryProfileId;
+            existingHashCommand.Parameters["$archivePath"].Value = book.ArchivePath;
+            existingHashCommand.Parameters["$entryPath"].Value = book.EntryPath;
+
+            var existingHashValue = await existingHashCommand.ExecuteScalarAsync(cancellationToken);
+            var existingHash = existingHashValue is null or DBNull ? null : Convert.ToString(existingHashValue, CultureInfo.InvariantCulture);
+
+            if (string.Equals(existingHash, book.ContentHash, StringComparison.OrdinalIgnoreCase))
+            {
+                booksSkipped++;
+                continue;
+            }
+
+            ApplyUpsertParameters(upsertCommand, book);
+            await upsertCommand.ExecuteNonQueryAsync(cancellationToken);
+
+            if (existingHash is null)
+            {
+                booksAdded++;
+            }
+            else
+            {
+                booksUpdated++;
+            }
+        }
+
+        await transaction.CommitAsync(cancellationToken);
+        return new BookImportBatchResult
+        {
+            BooksAdded = booksAdded,
+            BooksUpdated = booksUpdated,
+            BooksSkipped = booksSkipped
+        };
+    }
+
+    public async Task DeleteAsync(long libraryId, CancellationToken cancellationToken = default)
+    {
+        await using var connection = new SqliteConnection(_connectionString);
+        await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
+        command.CommandText = """
+                              DELETE FROM LibraryProfiles
+                              WHERE Id = $id;
+                              """;
+        command.Parameters.AddWithValue("$id", libraryId);
+        await command.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    private static LibraryProfile ReadProfile(SqliteDataReader reader)
+    {
+        var record = new ProfileRecord(
+            Id: reader.GetInt64(0),
+            Name: reader.GetString(1),
+            ProviderId: reader.GetString(2),
+            LibraryType: (LibraryType)reader.GetInt32(3),
+            ApiBaseUrl: GetNullableString(reader, 5),
+            SearchEndpoint: GetNullableString(reader, 6),
+            InpxFilePath: GetNullableString(reader, 7),
+            ArchiveDirectoryPath: GetNullableString(reader, 8),
+            CreatedAtUtc: DateTimeOffset.Parse(reader.GetString(9), CultureInfo.InvariantCulture, TimestampStyles),
+            LastOpenedAtUtc: ParseNullableTimestamp(GetNullableString(reader, 10)));
+
+        return new LibraryProfile
+        {
+            Id = record.Id,
+            Name = record.Name,
+            ProviderId = record.ProviderId,
+            LibraryType = record.LibraryType,
+            OnlineSource = BuildOnlineSource(record),
+            FolderSource = BuildFolderSource(record),
+            CreatedAtUtc = record.CreatedAtUtc,
+            LastOpenedAtUtc = record.LastOpenedAtUtc
+        };
+    }
+
+    private static ImportedBookMetadataSnapshot ReadImportedBook(SqliteDataReader reader)
+    {
+        return new ImportedBookMetadataSnapshot
+        {
+            Title = reader.GetString(0),
+            Authors = GetNullableString(reader, 1),
+            Annotation = GetNullableString(reader, 2),
+            PublishYear = reader.IsDBNull(3) ? null : reader.GetInt32(3),
+            Series = GetNullableString(reader, 4),
+            SeriesNumber = reader.IsDBNull(5) ? null : reader.GetInt32(5),
+            Genres = GetNullableString(reader, 6),
+            Language = GetNullableString(reader, 7),
+            ArchivePath = reader.GetString(8),
+            EntryPath = reader.GetString(9),
+            FileName = GetNullableString(reader, 10),
+            FileSize = reader.IsDBNull(11) ? null : reader.GetInt64(11),
+            ContentHash = GetNullableString(reader, 12),
+            CoverThumbnail = reader.IsDBNull(13) ? null : (byte[])reader[13]
+        };
+    }
+
+    private static SqliteCommand CreateImportedBookSelectByLocationCommand(SqliteConnection connection)
+    {
+        var command = connection.CreateCommand();
+        command.CommandText = """
+                              SELECT Title,
+                                     Authors,
+                                     Annotation,
+                                     PublishYear,
+                                     Series,
+                                     SeriesNumber,
+                                     Genres,
+                                     Language,
+                                     ArchivePath,
+                                     EntryPath,
+                                     FileName,
+                                     FileSize,
+                                     ContentHash,
+                                     CoverThumbnail
+                              FROM Books
+                              WHERE LibraryProfileId = $libraryProfileId
+                                AND ArchivePath = $archivePath
+                                AND EntryPath = $entryPath;
+                              """;
+        command.Parameters.AddWithValue("$libraryProfileId", 0L);
+        command.Parameters.AddWithValue("$archivePath", string.Empty);
+        command.Parameters.AddWithValue("$entryPath", string.Empty);
+        return command;
+    }
+
+    private static SqliteCommand CreateUpsertCommand(SqliteConnection connection, SqliteTransaction transaction)
+    {
+        var command = connection.CreateCommand();
+        command.Transaction = transaction;
         command.CommandText = """
                               INSERT INTO Books(
                                   LibraryProfileId,
@@ -218,74 +473,48 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
                                   ContentHash = excluded.ContentHash,
                                   CoverThumbnail = excluded.CoverThumbnail,
                                   UpdatedAt = excluded.UpdatedAt;
-                              SELECT Id
-                              FROM Books
-                              WHERE LibraryProfileId = $libraryProfileId
-                                AND ArchivePath = $archivePath
-                                AND EntryPath = $entryPath;
                               """;
-        command.Parameters.AddWithValue("$libraryProfileId", book.LibraryProfileId);
-        command.Parameters.AddWithValue("$title", book.Title);
-        command.Parameters.AddWithValue("$authors", book.Authors ?? (object)DBNull.Value);
-        command.Parameters.AddWithValue("$annotation", book.Annotation ?? (object)DBNull.Value);
-        command.Parameters.AddWithValue("$publishYear", book.PublishYear ?? (object)DBNull.Value);
-        command.Parameters.AddWithValue("$primaryFormat", (int)book.PrimaryFormat);
-        command.Parameters.AddWithValue("$series", book.Series ?? (object)DBNull.Value);
-        command.Parameters.AddWithValue("$seriesNumber", book.SeriesNumber ?? (object)DBNull.Value);
-        command.Parameters.AddWithValue("$genres", book.Genres ?? (object)DBNull.Value);
-        command.Parameters.AddWithValue("$language", book.Language ?? (object)DBNull.Value);
-        command.Parameters.AddWithValue("$archivePath", book.ArchivePath);
-        command.Parameters.AddWithValue("$entryPath", book.EntryPath);
-        command.Parameters.AddWithValue("$fileName", book.FileName ?? (object)DBNull.Value);
-        command.Parameters.AddWithValue("$fileSize", book.FileSize ?? (object)DBNull.Value);
-        command.Parameters.AddWithValue("$contentHash", book.ContentHash ?? (object)DBNull.Value);
-        command.Parameters.AddWithValue("$coverThumbnail", book.CoverThumbnail ?? (object)DBNull.Value);
-        command.Parameters.AddWithValue("$createdAt", book.CreatedAt.ToString("O"));
-        command.Parameters.AddWithValue("$updatedAt", book.UpdatedAt.ToString("O"));
-
-        var id = await command.ExecuteScalarAsync(cancellationToken);
-        return Convert.ToInt64(id);
+        command.Parameters.AddWithValue("$libraryProfileId", 0L);
+        command.Parameters.AddWithValue("$title", string.Empty);
+        command.Parameters.AddWithValue("$authors", DBNull.Value);
+        command.Parameters.AddWithValue("$annotation", DBNull.Value);
+        command.Parameters.AddWithValue("$publishYear", DBNull.Value);
+        command.Parameters.AddWithValue("$primaryFormat", 0);
+        command.Parameters.AddWithValue("$series", DBNull.Value);
+        command.Parameters.AddWithValue("$seriesNumber", DBNull.Value);
+        command.Parameters.AddWithValue("$genres", DBNull.Value);
+        command.Parameters.AddWithValue("$language", DBNull.Value);
+        command.Parameters.AddWithValue("$archivePath", string.Empty);
+        command.Parameters.AddWithValue("$entryPath", string.Empty);
+        command.Parameters.AddWithValue("$fileName", DBNull.Value);
+        command.Parameters.AddWithValue("$fileSize", DBNull.Value);
+        command.Parameters.AddWithValue("$contentHash", DBNull.Value);
+        command.Parameters.AddWithValue("$coverThumbnail", DBNull.Value);
+        command.Parameters.AddWithValue("$createdAt", string.Empty);
+        command.Parameters.AddWithValue("$updatedAt", string.Empty);
+        return command;
     }
 
-    public async Task DeleteAsync(long libraryId, CancellationToken cancellationToken = default)
+    private static void ApplyUpsertParameters(SqliteCommand command, BookImportRecord book)
     {
-        await using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync(cancellationToken);
-
-        await using var command = connection.CreateCommand();
-        command.CommandText = """
-                              DELETE FROM LibraryProfiles
-                              WHERE Id = $id;
-                              """;
-        command.Parameters.AddWithValue("$id", libraryId);
-        await command.ExecuteNonQueryAsync(cancellationToken);
-    }
-
-    private static LibraryProfile ReadProfile(SqliteDataReader reader)
-    {
-        var record = new ProfileRecord(
-            Id: reader.GetInt64(0),
-            Name: reader.GetString(1),
-            ProviderId: reader.GetString(2),
-            LibraryType: (LibraryType)reader.GetInt32(3),
-            ApiBaseUrl: GetNullableString(reader, 5),
-            SearchEndpoint: GetNullableString(reader, 6),
-            InpxFilePath: GetNullableString(reader, 7),
-            ArchiveDirectoryPath: GetNullableString(reader, 8),
-            CreatedAtUtc: DateTimeOffset.Parse(reader.GetString(9), CultureInfo.InvariantCulture, TimestampStyles),
-            LastOpenedAtUtc: ParseNullableTimestamp(GetNullableString(reader, 10)));
-
-        return new LibraryProfile
-        {
-            Id = record.Id,
-            Name = record.Name,
-            ProviderId = record.ProviderId,
-            LibraryType = record.LibraryType,
-            OnlineSource = BuildOnlineSource(record),
-            FolderSource = BuildFolderSource(record),
-            CreatedAtUtc = record.CreatedAtUtc,
-            LastOpenedAtUtc = record.LastOpenedAtUtc
-        };
+        command.Parameters["$libraryProfileId"].Value = book.LibraryProfileId;
+        command.Parameters["$title"].Value = book.Title;
+        command.Parameters["$authors"].Value = book.Authors ?? (object)DBNull.Value;
+        command.Parameters["$annotation"].Value = book.Annotation ?? (object)DBNull.Value;
+        command.Parameters["$publishYear"].Value = book.PublishYear ?? (object)DBNull.Value;
+        command.Parameters["$primaryFormat"].Value = (int)book.PrimaryFormat;
+        command.Parameters["$series"].Value = book.Series ?? (object)DBNull.Value;
+        command.Parameters["$seriesNumber"].Value = book.SeriesNumber ?? (object)DBNull.Value;
+        command.Parameters["$genres"].Value = book.Genres ?? (object)DBNull.Value;
+        command.Parameters["$language"].Value = book.Language ?? (object)DBNull.Value;
+        command.Parameters["$archivePath"].Value = book.ArchivePath;
+        command.Parameters["$entryPath"].Value = book.EntryPath;
+        command.Parameters["$fileName"].Value = book.FileName ?? (object)DBNull.Value;
+        command.Parameters["$fileSize"].Value = book.FileSize ?? (object)DBNull.Value;
+        command.Parameters["$contentHash"].Value = book.ContentHash ?? (object)DBNull.Value;
+        command.Parameters["$coverThumbnail"].Value = book.CoverThumbnail ?? (object)DBNull.Value;
+        command.Parameters["$createdAt"].Value = book.CreatedAt.ToString("O");
+        command.Parameters["$updatedAt"].Value = book.UpdatedAt.ToString("O");
     }
 
     private static string BuildConnectionInfo(LibraryProfile profile)
@@ -296,6 +525,16 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
             LibraryType.Folder => $"{profile.FolderSource?.InpxFilePath}|{profile.FolderSource?.ArchiveDirectoryPath}",
             _ => string.Empty
         };
+    }
+
+    private static string BuildLikePattern(string query)
+    {
+        var escaped = query
+            .Trim()
+            .Replace(@"\", @"\\", StringComparison.Ordinal)
+            .Replace("%", @"\%", StringComparison.Ordinal)
+            .Replace("_", @"\_", StringComparison.Ordinal);
+        return $"%{escaped}%";
     }
 
     private static void ValidateProfile(LibraryProfile profile)

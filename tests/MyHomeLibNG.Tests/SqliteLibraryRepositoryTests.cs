@@ -318,6 +318,129 @@ public sealed class SqliteLibraryRepositoryTests
     }
 
     [Fact]
+    public async Task UpsertImportedBooksAsync_BatchesAddsUpdatesAndSkips()
+    {
+        var database = await CreateDatabaseAsync();
+
+        try
+        {
+            var repository = new SqliteLibraryRepository(database.ConnectionString);
+            var timestamp = DateTimeOffset.UtcNow;
+            await repository.UpsertImportedBookAsync(new BookImportRecord
+            {
+                LibraryProfileId = 77,
+                Title = "Existing title",
+                Authors = "Author One",
+                PrimaryFormat = FileFormat.Fb2,
+                ArchivePath = @"X:\mock-library\archives\batch.zip",
+                EntryPath = "books/existing.fb2",
+                FileName = "existing.fb2",
+                FileSize = 101,
+                ContentHash = "same-hash",
+                CreatedAt = timestamp,
+                UpdatedAt = timestamp
+            });
+
+            var result = await repository.UpsertImportedBooksAsync(
+            [
+                new BookImportRecord
+                {
+                    LibraryProfileId = 77,
+                    Title = "Existing title",
+                    Authors = "Author One",
+                    PrimaryFormat = FileFormat.Fb2,
+                    ArchivePath = @"X:\mock-library\archives\batch.zip",
+                    EntryPath = "books/existing.fb2",
+                    FileName = "existing.fb2",
+                    FileSize = 101,
+                    ContentHash = "same-hash",
+                    CreatedAt = timestamp,
+                    UpdatedAt = timestamp.AddMinutes(1)
+                },
+                new BookImportRecord
+                {
+                    LibraryProfileId = 77,
+                    Title = "Updated title",
+                    Authors = "Author Two",
+                    PrimaryFormat = FileFormat.Fb2,
+                    ArchivePath = @"X:\mock-library\archives\batch.zip",
+                    EntryPath = "books/existing.fb2",
+                    FileName = "existing.fb2",
+                    FileSize = 202,
+                    ContentHash = "new-hash",
+                    CreatedAt = timestamp,
+                    UpdatedAt = timestamp.AddMinutes(2)
+                },
+                new BookImportRecord
+                {
+                    LibraryProfileId = 77,
+                    Title = "Brand new",
+                    Authors = "Author Three",
+                    PrimaryFormat = FileFormat.Fb2,
+                    ArchivePath = @"X:\mock-library\archives\batch.zip",
+                    EntryPath = "books/new.fb2",
+                    FileName = "new.fb2",
+                    FileSize = 303,
+                    ContentHash = "new-book-hash",
+                    CreatedAt = timestamp,
+                    UpdatedAt = timestamp.AddMinutes(3)
+                }
+            ]);
+
+            Assert.Equal(1, result.BooksAdded);
+            Assert.Equal(1, result.BooksUpdated);
+            Assert.Equal(1, result.BooksSkipped);
+            Assert.Equal(2L, await ExecuteScalarAsync<long>(database.ConnectionString, "SELECT COUNT(*) FROM Books;"));
+        }
+        finally
+        {
+            database.Dispose();
+        }
+    }
+
+    [Fact]
+    public async Task SearchImportedBooksAsync_ReturnsStoredRowsUsingIndexedFields()
+    {
+        var database = await CreateDatabaseAsync();
+
+        try
+        {
+            var repository = new SqliteLibraryRepository(database.ConnectionString);
+            await repository.UpsertImportedBooksAsync(
+            [
+                new BookImportRecord
+                {
+                    LibraryProfileId = 88,
+                    Title = "Chronicles of Testing",
+                    Authors = "Ada Author",
+                    Annotation = "Hidden token in annotation",
+                    PrimaryFormat = FileFormat.Fb2,
+                    Series = "Chronicles",
+                    Genres = "fantasy; science",
+                    Language = "ru",
+                    ArchivePath = @"X:\mock-library\archives\search.zip",
+                    EntryPath = "books/one.fb2",
+                    FileName = "one.fb2",
+                    FileSize = 123,
+                    ContentHash = "hash-one",
+                    CreatedAt = DateTimeOffset.UtcNow,
+                    UpdatedAt = DateTimeOffset.UtcNow
+                }
+            ]);
+
+            Assert.Equal(1L, await repository.GetImportedBookCountAsync(88));
+            Assert.Single(await repository.SearchImportedBooksAsync(88, "Ada"));
+            Assert.Single(await repository.SearchImportedBooksAsync(88, "Chronicles"));
+            Assert.Single(await repository.SearchImportedBooksAsync(88, "fantasy"));
+            Assert.Single(await repository.SearchImportedBooksAsync(88, "annotation"));
+        }
+        finally
+        {
+            database.Dispose();
+        }
+    }
+
+    [Fact]
     public async Task ResolveAsync_ReturnsOnlineApiStructure()
     {
         var resolver = new LibrarySourceResolver(CreateOnlineEnvironment());

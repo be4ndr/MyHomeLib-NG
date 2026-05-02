@@ -169,7 +169,30 @@ public sealed class MainWindowViewModelTests
             return Task.FromResult<ImportedBookMetadataSnapshot?>(null);
         }
 
+        public Task<long> GetImportedBookCountAsync(long libraryProfileId, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult(0L);
+        }
+
+        public Task<IReadOnlyList<ImportedBookMetadataSnapshot>> SearchImportedBooksAsync(
+            long libraryProfileId,
+            string query,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult<IReadOnlyList<ImportedBookMetadataSnapshot>>(Array.Empty<ImportedBookMetadataSnapshot>());
+        }
+
         public Task<long> UpsertImportedBookAsync(BookImportRecord book, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            throw new NotSupportedException();
+        }
+
+        public Task<BookImportBatchResult> UpsertImportedBooksAsync(
+            IReadOnlyList<BookImportRecord> books,
+            CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
             throw new NotSupportedException();

@@ -1,4 +1,6 @@
 using System.Globalization;
+using System.Text;
+using System.Xml;
 using System.Xml.Linq;
 using MyHomeLibNG.Core.Interfaces;
 using MyHomeLibNG.Core.Models;
@@ -8,64 +10,137 @@ namespace MyHomeLibNG.Infrastructure.Import;
 
 public sealed class Fb2MetadataParser : IFb2MetadataParser
 {
-    public Task<Fb2BookMetadata> ParseAsync(Stream stream, CancellationToken cancellationToken = default)
+    static Fb2MetadataParser()
+    {
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+    }
+
+    public Task<Fb2BookMetadata> ParseAsync(
+        Stream stream,
+        Fb2ParsingOptions? options = null,
+        CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
         ArgumentNullException.ThrowIfNull(stream);
 
-        var document = XDocument.Load(stream, LoadOptions.None);
-        var description = FindChild(document.Root, "description");
-        var titleInfo = FindChild(description, "title-info");
-        var publishInfo = FindChild(description, "publish-info");
-        var coverReference = ResolveCoverReference(titleInfo);
-        var coverImageBytes = ResolveCoverImageBytes(document, coverReference);
+        options ??= Fb2ParsingOptions.Full;
+        var metadata = new MutableMetadata();
+        var settings = new XmlReaderSettings
+        {
+            Async = false,
+            DtdProcessing = DtdProcessing.Ignore,
+            IgnoreComments = true,
+            IgnoreWhitespace = true,
+            CloseInput = false
+        };
 
+        using var reader = XmlReader.Create(stream, settings);
+        while (reader.Read())
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (reader.NodeType != XmlNodeType.Element)
+            {
+                continue;
+            }
+
+            switch (reader.LocalName)
+            {
+                case "title-info":
+                    ParseTitleInfo(reader, metadata, options, cancellationToken);
+                    break;
+                case "publish-info":
+                    ParsePublishInfo(reader, metadata, cancellationToken);
+                    break;
+                case "binary" when options.ExtractCoverImages:
+                    TryReadCoverBinary(reader, metadata);
+                    break;
+            }
+        }
+
+        var coverBytes = metadata.CoverImageBytes;
         return Task.FromResult(new Fb2BookMetadata
         {
-            Title = ExtractTitle(titleInfo),
-            Authors = ExtractAuthors(titleInfo),
-            Genres = ExtractGenres(titleInfo),
-            Annotation = ExtractAnnotation(titleInfo),
-            Series = ExtractSeries(titleInfo),
-            SeriesNumber = ExtractSeriesNumber(titleInfo),
-            Language = NullIfWhiteSpace(FindChildValue(titleInfo, "lang")),
-            PublishYear = ExtractPublishYear(titleInfo, publishInfo),
-            CoverReference = coverReference,
-            CoverImageBytes = coverImageBytes,
-            ThumbnailBytes = CreateThumbnailBytes(coverImageBytes)
+            Title = metadata.Title ?? string.Empty,
+            Authors = metadata.Authors.ToArray(),
+            Genres = metadata.Genres.ToArray(),
+            Annotation = metadata.Annotation,
+            Series = metadata.Series,
+            SeriesNumber = metadata.SeriesNumber,
+            Language = metadata.Language,
+            PublishYear = metadata.PublishYear,
+            CoverReference = metadata.CoverReference,
+            CoverImageBytes = coverBytes,
+            ThumbnailBytes = options.ExtractThumbnail ? CreateThumbnailBytes(coverBytes) : null
         });
     }
 
-    private static string ExtractTitle(XElement? titleInfo)
+    private static void ParseTitleInfo(
+        XmlReader reader,
+        MutableMetadata metadata,
+        Fb2ParsingOptions options,
+        CancellationToken cancellationToken)
     {
-        var bookTitle = NullIfWhiteSpace(FindChildValue(titleInfo, "book-title"));
-        return bookTitle ?? string.Empty;
-    }
-
-    private static IReadOnlyList<string> ExtractAuthors(XElement? titleInfo)
-    {
-        if (titleInfo is null)
+        cancellationToken.ThrowIfCancellationRequested();
+        var titleInfoXml = reader.ReadOuterXml();
+        if (string.IsNullOrWhiteSpace(titleInfoXml))
         {
-            return Array.Empty<string>();
+            return;
         }
 
-        return titleInfo
-            .Elements()
-            .Where(element => element.Name.LocalName == "author")
-            .Select(FormatAuthor)
-            .Where(name => !string.IsNullOrWhiteSpace(name))
-            .Cast<string>()
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
+        var titleInfo = XElement.Parse(titleInfoXml);
+        metadata.Title ??= NullIfWhiteSpace(titleInfo.Elements().FirstOrDefault(element => element.Name.LocalName == "book-title")?.Value);
+
+        foreach (var authorElement in titleInfo.Elements().Where(element => element.Name.LocalName == "author"))
+        {
+            var author = ParseAuthor(authorElement, cancellationToken);
+            if (!string.IsNullOrWhiteSpace(author) &&
+                !metadata.Authors.Contains(author, StringComparer.OrdinalIgnoreCase))
+            {
+                metadata.Authors.Add(author);
+            }
+        }
+
+        foreach (var genreElement in titleInfo.Elements().Where(element => element.Name.LocalName == "genre"))
+        {
+            var genre = NullIfWhiteSpace(genreElement.Value);
+            if (!string.IsNullOrWhiteSpace(genre) &&
+                !metadata.Genres.Contains(genre, StringComparer.OrdinalIgnoreCase))
+            {
+                metadata.Genres.Add(genre);
+            }
+        }
+
+        if (options.ExtractAnnotation)
+        {
+            metadata.Annotation ??= ParseAnnotation(
+                titleInfo.Elements().FirstOrDefault(element => element.Name.LocalName == "annotation"),
+                cancellationToken);
+        }
+
+        var sequenceElement = titleInfo.Elements().FirstOrDefault(element => element.Name.LocalName == "sequence");
+        metadata.Series ??= NullIfWhiteSpace(sequenceElement?.Attribute("name")?.Value);
+        metadata.SeriesNumber ??= TryParseInteger(sequenceElement?.Attribute("number")?.Value);
+        metadata.Language ??= NullIfWhiteSpace(titleInfo.Elements().FirstOrDefault(element => element.Name.LocalName == "lang")?.Value);
+
+        var dateElement = titleInfo.Elements().FirstOrDefault(element => element.Name.LocalName == "date");
+        metadata.PublishYear ??= TryParseYear(dateElement?.Attribute("value")?.Value)
+                                 ?? TryParseYear(dateElement?.Value);
+
+        if (options.ExtractCoverImages)
+        {
+            metadata.CoverReference ??= ParseCoverReference(
+                titleInfo.Elements().FirstOrDefault(element => element.Name.LocalName == "coverpage"));
+        }
     }
 
-    private static string? FormatAuthor(XElement authorElement)
+    private static string? ParseAuthor(XElement authorElement, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var parts = new[]
             {
-                FindChildValue(authorElement, "first-name"),
-                FindChildValue(authorElement, "middle-name"),
-                FindChildValue(authorElement, "last-name")
+                authorElement.Elements().FirstOrDefault(element => element.Name.LocalName == "first-name")?.Value,
+                authorElement.Elements().FirstOrDefault(element => element.Name.LocalName == "middle-name")?.Value,
+                authorElement.Elements().FirstOrDefault(element => element.Name.LocalName == "last-name")?.Value
             }
             .Select(NullIfWhiteSpace)
             .Where(value => value is not null)
@@ -77,117 +152,91 @@ public sealed class Fb2MetadataParser : IFb2MetadataParser
             return string.Join(" ", parts);
         }
 
-        return NullIfWhiteSpace(FindChildValue(authorElement, "nickname"));
+        return NullIfWhiteSpace(authorElement.Elements().FirstOrDefault(element => element.Name.LocalName == "nickname")?.Value);
     }
 
-    private static IReadOnlyList<string> ExtractGenres(XElement? titleInfo)
+    private static string? ParseAnnotation(XElement? annotationElement, CancellationToken cancellationToken)
     {
-        if (titleInfo is null)
-        {
-            return Array.Empty<string>();
-        }
-
-        return titleInfo
-            .Elements()
-            .Where(element => element.Name.LocalName == "genre")
-            .Select(element => NullIfWhiteSpace(element.Value))
-            .Where(value => value is not null)
-            .Cast<string>()
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-    }
-
-    private static string? ExtractAnnotation(XElement? titleInfo)
-    {
-        var annotation = FindChild(titleInfo, "annotation");
-        if (annotation is null)
+        var blocks = new List<string>();
+        if (annotationElement is null)
         {
             return null;
         }
 
-        var blocks = annotation
-            .DescendantsAndSelf()
-            .Where(element => element.Name.LocalName is "p" or "subtitle" or "title")
-            .Select(element => NormalizeWhitespace(element.Value))
-            .Where(value => !string.IsNullOrWhiteSpace(value))
-            .ToArray();
+        foreach (var element in annotationElement.DescendantsAndSelf()
+                     .Where(element => element.Name.LocalName is "p" or "subtitle" or "title"))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var value = NormalizeWhitespace(element.Value);
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                blocks.Add(value);
+            }
+        }
 
-        if (blocks.Length > 0)
+        if (blocks.Count > 0)
         {
             return string.Join(Environment.NewLine + Environment.NewLine, blocks);
         }
 
-        return NullIfWhiteSpace(NormalizeWhitespace(annotation.Value));
+        return null;
     }
 
-    private static string? ExtractSeries(XElement? titleInfo)
-        => NullIfWhiteSpace(titleInfo?
-            .Elements()
-            .FirstOrDefault(element => element.Name.LocalName == "sequence")?
-            .Attribute("name")?
-            .Value);
-
-    private static int? ExtractSeriesNumber(XElement? titleInfo)
-        => TryParseInteger(titleInfo?
-            .Elements()
-            .FirstOrDefault(element => element.Name.LocalName == "sequence")?
-            .Attribute("number")?
-            .Value);
-
-    private static int? ExtractPublishYear(XElement? titleInfo, XElement? publishInfo)
+    private static string? ParseCoverReference(XElement? coverPageElement)
     {
-        var publishYear = TryParseYear(FindChildValue(publishInfo, "year"));
-        if (publishYear.HasValue)
-        {
-            return publishYear;
-        }
-
-        var dateElement = FindChild(titleInfo, "date");
-        return TryParseYear(dateElement?.Attribute("value")?.Value)
-               ?? TryParseYear(dateElement?.Value);
-    }
-
-    private static string? ResolveCoverReference(XElement? titleInfo)
-    {
-        var image = FindChild(FindChild(titleInfo, "coverpage"), "image");
-        var hrefValue = image?
-            .Attributes()
-            .FirstOrDefault(attribute => attribute.Name.LocalName == "href")
-            ?.Value;
-
-        return NullIfWhiteSpace(hrefValue);
-    }
-
-    private static byte[]? ResolveCoverImageBytes(XDocument document, string? coverReference)
-    {
-        var binaryId = NormalizeBinaryId(coverReference);
-        if (binaryId is null)
+        if (coverPageElement is null)
         {
             return null;
         }
 
-        var binary = document
-            .Descendants()
-            .FirstOrDefault(element =>
-                element.Name.LocalName == "binary" &&
-                string.Equals(
-                    NormalizeBinaryId(element.Attribute("id")?.Value),
-                    binaryId,
-                    StringComparison.OrdinalIgnoreCase));
+        var imageElement = coverPageElement.Elements().FirstOrDefault(element => element.Name.LocalName == "image");
+        return NullIfWhiteSpace(imageElement?.Attributes().FirstOrDefault(attribute => attribute.Name.LocalName == "href")?.Value);
+    }
 
-        if (binary is null)
+    private static void ParsePublishInfo(
+        XmlReader reader,
+        MutableMetadata metadata,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var publishInfoXml = reader.ReadOuterXml();
+        if (string.IsNullOrWhiteSpace(publishInfoXml))
         {
-            return null;
+            return;
+        }
+
+        var publishInfo = XElement.Parse(publishInfoXml);
+        metadata.PublishYear ??= TryParseYear(publishInfo.Elements().FirstOrDefault(element => element.Name.LocalName == "year")?.Value);
+    }
+
+    private static void TryReadCoverBinary(XmlReader reader, MutableMetadata metadata)
+    {
+        if (metadata.CoverImageBytes is not null)
+        {
+            reader.Skip();
+            return;
+        }
+
+        var referenceId = NormalizeBinaryId(metadata.CoverReference);
+        var binaryId = NormalizeBinaryId(reader.GetAttribute("id"));
+        if (referenceId is null ||
+            binaryId is null ||
+            !string.Equals(referenceId, binaryId, StringComparison.OrdinalIgnoreCase))
+        {
+            reader.Skip();
+            return;
         }
 
         try
         {
-            var payload = new string(binary.Value.Where(character => !char.IsWhiteSpace(character)).ToArray());
-            return payload.Length == 0 ? null : Convert.FromBase64String(payload);
+            var payload = RemoveWhitespace(reader.ReadElementContentAsString());
+            metadata.CoverImageBytes = payload.Length == 0
+                ? null
+                : Convert.FromBase64String(payload);
         }
         catch (FormatException)
         {
-            return null;
+            metadata.CoverImageBytes = null;
         }
     }
 
@@ -237,26 +286,34 @@ public sealed class Fb2MetadataParser : IFb2MetadataParser
         }
     }
 
-    private static XElement? FindChild(XElement? parent, string localName)
-        => parent?.Elements().FirstOrDefault(element => element.Name.LocalName == localName);
+    private static string RemoveWhitespace(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
 
-    private static string? FindChildValue(XElement? parent, string localName)
-        => FindChild(parent, localName)?.Value;
+        var builder = new StringBuilder(value.Length);
+        foreach (var character in value)
+        {
+            if (!char.IsWhiteSpace(character))
+            {
+                builder.Append(character);
+            }
+        }
+
+        return builder.ToString();
+    }
 
     private static string? NormalizeBinaryId(string? value)
     {
         var normalized = NullIfWhiteSpace(value);
-        if (normalized is null)
-        {
-            return null;
-        }
-
-        return normalized.TrimStart('#');
+        return normalized?.TrimStart('#');
     }
 
     private static string NormalizeWhitespace(string value)
     {
-        var builder = new System.Text.StringBuilder(value.Length);
+        var builder = new StringBuilder(value.Length);
         var previousWasWhitespace = false;
 
         foreach (var character in value)
@@ -323,4 +380,18 @@ public sealed class Fb2MetadataParser : IFb2MetadataParser
 
     private static string? NullIfWhiteSpace(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private sealed class MutableMetadata
+    {
+        public string? Title { get; set; }
+        public List<string> Authors { get; } = [];
+        public List<string> Genres { get; } = [];
+        public string? Annotation { get; set; }
+        public string? Series { get; set; }
+        public int? SeriesNumber { get; set; }
+        public string? Language { get; set; }
+        public int? PublishYear { get; set; }
+        public string? CoverReference { get; set; }
+        public byte[]? CoverImageBytes { get; set; }
+    }
 }

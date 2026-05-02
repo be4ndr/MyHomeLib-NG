@@ -1,3 +1,4 @@
+using System.Text;
 using MyHomeLibNG.Core.Interfaces;
 using MyHomeLibNG.Core.Models;
 using MyHomeLibNG.Infrastructure.Providers;
@@ -6,6 +7,8 @@ namespace MyHomeLibNG.Infrastructure.Providers.Offline;
 
 public sealed class OfflineBookProvider : IBookProvider
 {
+    private const string ImportedSourcePrefix = "imported:";
+
     private readonly LibraryProfile _profile;
     private readonly ILibraryRepository _libraryRepository;
     private readonly IOfflineCatalogCache _catalogCache;
@@ -53,6 +56,14 @@ public sealed class OfflineBookProvider : IBookProvider
 
     public async Task<IReadOnlyList<NormalizedBook>> SearchAsync(string query, CancellationToken cancellationToken = default)
     {
+        if (_profile.Id > 0 && await _libraryRepository.GetImportedBookCountAsync(_profile.Id, cancellationToken) > 0)
+        {
+            var importedBooks = await _libraryRepository.SearchImportedBooksAsync(_profile.Id, query, cancellationToken);
+            return importedBooks
+                .Select(MapImportedBook)
+                .ToArray();
+        }
+
         var catalog = await LoadCatalogAsync(cancellationToken);
         var matches = catalog
             .Where(entry => Matches(entry.Book, query))
@@ -63,6 +74,17 @@ public sealed class OfflineBookProvider : IBookProvider
 
     public async Task<NormalizedBook?> GetByIdAsync(string sourceId, CancellationToken cancellationToken = default)
     {
+        if (TryParseImportedSourceId(sourceId, out var archivePath, out var entryPath))
+        {
+            var importedBook = await _libraryRepository.GetImportedBookMetadataAsync(
+                _profile.Id,
+                archivePath,
+                entryPath,
+                cancellationToken);
+
+            return importedBook is null ? null : MapImportedBook(importedBook);
+        }
+
         var catalog = await LoadCatalogAsync(cancellationToken);
         var entry = catalog
             .FirstOrDefault(candidate => string.Equals(candidate.Book.SourceId, sourceId, StringComparison.OrdinalIgnoreCase));
@@ -77,6 +99,15 @@ public sealed class OfflineBookProvider : IBookProvider
 
     public async Task<Stream> OpenContentAsync(string sourceId, CancellationToken cancellationToken = default)
     {
+        if (TryParseImportedSourceId(sourceId, out var archivePath, out var entryPath))
+        {
+            return await _contentStorageRegistry.OpenReadAsync(new OfflineBookLocation
+            {
+                ContainerPath = archivePath,
+                ArchiveEntryPath = entryPath
+            }, cancellationToken);
+        }
+
         var catalog = await LoadCatalogAsync(cancellationToken);
         var entry = catalog.FirstOrDefault(candidate =>
             string.Equals(candidate.Book.SourceId, sourceId, StringComparison.OrdinalIgnoreCase));
@@ -130,27 +161,59 @@ public sealed class OfflineBookProvider : IBookProvider
             return entry.Book;
         }
 
+        return MergeCatalogAndImportedBook(entry.Book, importedMetadata);
+    }
+
+    private static NormalizedBook MergeCatalogAndImportedBook(NormalizedBook catalogBook, ImportedBookMetadataSnapshot importedMetadata)
+    {
         return new NormalizedBook
         {
-            Title = string.IsNullOrWhiteSpace(importedMetadata.Title) ? entry.Book.Title : importedMetadata.Title,
-            Source = entry.Book.Source,
-            SourceId = entry.Book.SourceId,
-            Authors = MergeAuthors(entry.Book.Authors, importedMetadata.Authors),
-            Series = importedMetadata.Series ?? entry.Book.Series,
-            Language = importedMetadata.Language ?? entry.Book.Language,
-            Description = importedMetadata.Annotation ?? entry.Book.Description,
-            Subjects = MergeSubjects(entry.Book.Subjects, importedMetadata.Genres),
-            Publisher = entry.Book.Publisher,
-            PublishedYear = importedMetadata.PublishYear ?? entry.Book.PublishedYear,
-            Isbn10 = entry.Book.Isbn10,
-            Isbn13 = entry.Book.Isbn13,
-            CoverUrl = entry.Book.CoverUrl,
+            Title = string.IsNullOrWhiteSpace(importedMetadata.Title) ? catalogBook.Title : importedMetadata.Title,
+            Source = catalogBook.Source,
+            SourceId = catalogBook.SourceId,
+            Authors = MergeAuthors(catalogBook.Authors, importedMetadata.Authors),
+            Series = importedMetadata.Series ?? catalogBook.Series,
+            Language = importedMetadata.Language ?? catalogBook.Language,
+            Description = importedMetadata.Annotation ?? catalogBook.Description,
+            Subjects = MergeSubjects(catalogBook.Subjects, importedMetadata.Genres),
+            Publisher = catalogBook.Publisher,
+            PublishedYear = importedMetadata.PublishYear ?? catalogBook.PublishedYear,
+            Isbn10 = catalogBook.Isbn10,
+            Isbn13 = catalogBook.Isbn13,
+            CoverUrl = catalogBook.CoverUrl,
             CoverThumbnail = importedMetadata.CoverThumbnail,
-            Formats = entry.Book.Formats,
-            DownloadLinks = entry.Book.DownloadLinks,
-            ReadLink = entry.Book.ReadLink,
-            BorrowLink = entry.Book.BorrowLink
+            Formats = catalogBook.Formats,
+            DownloadLinks = catalogBook.DownloadLinks,
+            ReadLink = catalogBook.ReadLink,
+            BorrowLink = catalogBook.BorrowLink
         };
+    }
+
+    private NormalizedBook MapImportedBook(ImportedBookMetadataSnapshot book)
+    {
+        return new NormalizedBook
+        {
+            Title = book.Title,
+            Source = _profile.Name,
+            SourceId = CreateImportedSourceId(book.ArchivePath, book.EntryPath),
+            Authors = SplitList(book.Authors),
+            Series = book.Series,
+            Language = book.Language,
+            Description = book.Annotation,
+            Subjects = SplitList(book.Genres),
+            PublishedYear = book.PublishYear,
+            CoverThumbnail = book.CoverThumbnail,
+            Formats = BuildFormats(book.EntryPath, book.FileName)
+        };
+    }
+
+    private static IReadOnlyList<string> BuildFormats(string entryPath, string? fileName)
+    {
+        var source = string.IsNullOrWhiteSpace(entryPath) ? fileName : entryPath;
+        var extension = Path.GetExtension(source);
+        return string.IsNullOrWhiteSpace(extension)
+            ? Array.Empty<string>()
+            : [extension.TrimStart('.').ToLowerInvariant()];
     }
 
     private static bool Matches(NormalizedBook book, string query)
@@ -188,5 +251,44 @@ public sealed class OfflineBookProvider : IBookProvider
                 .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                 .Where(item => !string.IsNullOrWhiteSpace(item))
                 .ToArray();
+    }
+
+    private static string CreateImportedSourceId(string archivePath, string entryPath)
+    {
+        return ImportedSourcePrefix +
+               Convert.ToBase64String(Encoding.UTF8.GetBytes(archivePath)) +
+               ":" +
+               Convert.ToBase64String(Encoding.UTF8.GetBytes(entryPath));
+    }
+
+    private static bool TryParseImportedSourceId(string sourceId, out string archivePath, out string entryPath)
+    {
+        archivePath = string.Empty;
+        entryPath = string.Empty;
+
+        if (!sourceId.StartsWith(ImportedSourcePrefix, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var encoded = sourceId[ImportedSourcePrefix.Length..];
+        var separatorIndex = encoded.IndexOf(':', StringComparison.Ordinal);
+        if (separatorIndex <= 0 || separatorIndex >= encoded.Length - 1)
+        {
+            return false;
+        }
+
+        try
+        {
+            archivePath = Encoding.UTF8.GetString(Convert.FromBase64String(encoded[..separatorIndex]));
+            entryPath = Encoding.UTF8.GetString(Convert.FromBase64String(encoded[(separatorIndex + 1)..]));
+            return !string.IsNullOrWhiteSpace(archivePath) && !string.IsNullOrWhiteSpace(entryPath);
+        }
+        catch (FormatException)
+        {
+            archivePath = string.Empty;
+            entryPath = string.Empty;
+            return false;
+        }
     }
 }
