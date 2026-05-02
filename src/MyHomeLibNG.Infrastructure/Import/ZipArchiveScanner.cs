@@ -71,19 +71,25 @@ public sealed class ZipArchiveScanner : IZipArchiveScanner
         }
     }
 
-    private IReadOnlyList<string> ResolveArchivePaths(string path)
+    private IEnumerable<string> ResolveArchivePaths(string path)
     {
         if (_fileSystem.FileExists(path))
         {
-            return path.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)
-                ? [path]
-                : Array.Empty<string>();
+            if (path.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+            {
+                yield return path;
+            }
+
+            yield break;
         }
 
-        return _fileSystem.EnumerateFilesRecursive(path)
-            .Where(candidate => candidate.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
-            .OrderBy(candidate => candidate, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
+        foreach (var candidate in _fileSystem.EnumerateFilesRecursive(path))
+        {
+            if (candidate.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+            {
+                yield return candidate;
+            }
+        }
     }
 
     private async Task<Stream> OpenEntryStreamAsync(
@@ -96,9 +102,7 @@ public sealed class ZipArchiveScanner : IZipArchiveScanner
         try
         {
             var archive = new ZipArchive(archiveStream, ZipArchiveMode.Read, leaveOpen: true);
-            var entry = archive.GetEntry(entryPath) ??
-                        archive.Entries.FirstOrDefault(candidate =>
-                            string.Equals(candidate.FullName, entryPath, StringComparison.Ordinal));
+            var entry = archive.GetEntry(entryPath);
 
             if (entry is null)
             {

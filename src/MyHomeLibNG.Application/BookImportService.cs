@@ -387,14 +387,35 @@ public sealed class BookImportService
 
     private static string? JoinValues(IReadOnlyList<string> values)
     {
-        var normalized = values
-            .Select(NullIfWhiteSpace)
-            .Where(value => value is not null)
-            .Cast<string>()
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
+        if (values.Count == 0)
+        {
+            return null;
+        }
 
-        return normalized.Length == 0 ? null : string.Join("; ", normalized);
+        HashSet<string>? unique = null;
+        List<string>? ordered = null;
+
+        foreach (var value in values)
+        {
+            var normalized = NullIfWhiteSpace(value);
+            if (normalized is null)
+            {
+                continue;
+            }
+
+            unique ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (!unique.Add(normalized))
+            {
+                continue;
+            }
+
+            ordered ??= new List<string>();
+            ordered.Add(normalized);
+        }
+
+        return ordered is null || ordered.Count == 0
+            ? null
+            : string.Join("; ", ordered);
     }
 
     private static string? NullIfWhiteSpace(string? value)

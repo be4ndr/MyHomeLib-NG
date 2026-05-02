@@ -184,6 +184,7 @@ public partial class MainWindow : Window
         {
             var coordinator = ((App)Avalonia.Application.Current!).Services.GetRequiredService<LocalLibraryScanCoordinator>();
             var window = new ScanProgressWindow(new ScanProgressWindowViewModel(coordinator, profile));
+            window.Closed += OnScanWindowClosed;
             window.Show(this);
             _viewModel.ReportActionSuccess($"Started background scan for {profile.Name}.");
         }
@@ -193,6 +194,16 @@ public partial class MainWindow : Window
         }
 
         return Task.CompletedTask;
+    }
+
+    private async void OnScanWindowClosed(object? sender, EventArgs e)
+    {
+        if (sender is Window window)
+        {
+            window.Closed -= OnScanWindowClosed;
+        }
+
+        await _viewModel.RefreshAsync();
     }
 
     internal void HandleClearSearchFiltersClicked()

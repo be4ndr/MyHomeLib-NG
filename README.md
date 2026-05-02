@@ -84,7 +84,7 @@ Initial import stores enough metadata for usable search and display:
 - file name
 - file size
 
-Annotation text is indexed during import.
+Annotation and cover extraction are skipped during bulk import to keep throughput high.
 
 Cover image decoding and thumbnail generation are intentionally deferred during bulk import so the first pass stays fast and memory-bounded.
 
@@ -93,7 +93,7 @@ Cover image decoding and thumbnail generation are intentionally deferred during 
 - Once a library has indexed rows in SQLite, offline search and directory browsing use the indexed SQLite data.
 - This means the Main window and search results reflect imported metadata instead of depending on raw INPX fields.
 - Title, author, series, genres, language, year filters, and keyword search operate on the populated indexed fields.
-- Annotation participates in keyword search when it has been indexed.
+- Keyword search is tokenized (multiple words are matched as multiple terms).
 - Book content still opens directly from the ZIP archive entry.
 
 ### INPX compatibility notes
@@ -104,6 +104,6 @@ Cover image decoding and thumbnail generation are intentionally deferred during 
 
 ### Current limitations
 
-- Bulk import does not generate cover thumbnails during the initial pass.
+- Bulk import does not generate cover thumbnails or annotation text during the initial pass.
 - If a library has not been imported yet, offline search falls back to the INPX catalog view.
 - Search uses regular SQLite indexed fields, not FTS.
