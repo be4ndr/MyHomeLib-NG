@@ -154,58 +154,37 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
-        var hasQuery = !string.IsNullOrWhiteSpace(query);
-        command.CommandText = hasQuery
-            ? """
-              SELECT Title,
-                     Authors,
-                     Annotation,
-                     PublishYear,
-                     Series,
-                     SeriesNumber,
-                     Genres,
-                     Language,
-                     ArchivePath,
-                     EntryPath,
-                     FileName,
-                     FileSize,
-                     ContentHash,
-                     CoverThumbnail
-              FROM Books
-              WHERE LibraryProfileId = $libraryProfileId
-                AND (
-                    Title LIKE $likeQuery ESCAPE '\'
-                    OR Authors LIKE $likeQuery ESCAPE '\'
-                    OR Series LIKE $likeQuery ESCAPE '\'
-                    OR Genres LIKE $likeQuery ESCAPE '\'
-                    OR Annotation LIKE $likeQuery ESCAPE '\'
-                    OR Language LIKE $likeQuery ESCAPE '\'
-                )
-              ORDER BY Title COLLATE NOCASE, Authors COLLATE NOCASE, EntryPath COLLATE NOCASE;
-              """
-            : """
-              SELECT Title,
-                     Authors,
-                     Annotation,
-                     PublishYear,
-                     Series,
-                     SeriesNumber,
-                     Genres,
-                     Language,
-                     ArchivePath,
-                     EntryPath,
-                     FileName,
-                     FileSize,
-                     ContentHash,
-                     CoverThumbnail
-              FROM Books
-              WHERE LibraryProfileId = $libraryProfileId
-              ORDER BY Title COLLATE NOCASE, Authors COLLATE NOCASE, EntryPath COLLATE NOCASE;
-              """;
+        var queryTokens = BuildSearchTokens(query);
+        var hasQuery = queryTokens.Length > 0;
+        var whereClause = hasQuery
+            ? string.Join(" AND ", queryTokens.Select((_, index) =>
+                $"(Title LIKE $likeQuery{index} ESCAPE '\\' OR Authors LIKE $likeQuery{index} ESCAPE '\\' OR Series LIKE $likeQuery{index} ESCAPE '\\' OR Genres LIKE $likeQuery{index} ESCAPE '\\' OR Annotation LIKE $likeQuery{index} ESCAPE '\\' OR Language LIKE $likeQuery{index} ESCAPE '\\')"))
+            : "1=1";
+
+        command.CommandText = $"""
+                              SELECT Title,
+                                     Authors,
+                                     Annotation,
+                                     PublishYear,
+                                     Series,
+                                     SeriesNumber,
+                                     Genres,
+                                     Language,
+                                     ArchivePath,
+                                     EntryPath,
+                                     FileName,
+                                     FileSize,
+                                     ContentHash,
+                                     CoverThumbnail
+                              FROM Books
+                              WHERE LibraryProfileId = $libraryProfileId
+                                AND {whereClause}
+                              ORDER BY Title COLLATE NOCASE, Authors COLLATE NOCASE, EntryPath COLLATE NOCASE;
+                              """;
         command.Parameters.AddWithValue("$libraryProfileId", libraryProfileId);
-        if (hasQuery)
+        for (var index = 0; index < queryTokens.Length; index++)
         {
-            command.Parameters.AddWithValue("$likeQuery", BuildLikePattern(query));
+            command.Parameters.AddWithValue($"$likeQuery{index}", BuildLikePattern(queryTokens[index]));
         }
 
         var results = new List<ImportedBookMetadataSnapshot>();
@@ -535,6 +514,16 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
             .Replace("%", @"\%", StringComparison.Ordinal)
             .Replace("_", @"\_", StringComparison.Ordinal);
         return $"%{escaped}%";
+    }
+
+    private static string[] BuildSearchTokens(string query)
+    {
+        return string.IsNullOrWhiteSpace(query)
+            ? []
+            : query
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
     }
 
     private static void ValidateProfile(LibraryProfile profile)

@@ -6,6 +6,7 @@ public sealed class Fb2ParsingOptions
 
     public static Fb2ParsingOptions FastImport { get; } = new()
     {
+        ExtractAnnotation = false,
         ExtractCoverImages = false,
         ExtractThumbnail = false
     };

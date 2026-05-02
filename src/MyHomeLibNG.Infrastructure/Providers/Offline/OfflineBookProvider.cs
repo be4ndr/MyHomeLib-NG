@@ -56,12 +56,15 @@ public sealed class OfflineBookProvider : IBookProvider
 
     public async Task<IReadOnlyList<NormalizedBook>> SearchAsync(string query, CancellationToken cancellationToken = default)
     {
-        if (_profile.Id > 0 && await _libraryRepository.GetImportedBookCountAsync(_profile.Id, cancellationToken) > 0)
+        if (_profile.Id > 0)
         {
             var importedBooks = await _libraryRepository.SearchImportedBooksAsync(_profile.Id, query, cancellationToken);
-            return importedBooks
-                .Select(MapImportedBook)
-                .ToArray();
+            if (importedBooks.Count > 0)
+            {
+                return importedBooks
+                    .Select(MapImportedBook)
+                    .ToArray();
+            }
         }
 
         var catalog = await LoadCatalogAsync(cancellationToken);
