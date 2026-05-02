@@ -47,26 +47,63 @@ This keeps infrastructure and UI concerns separated from domain concerns:
 - Core does not depend on Infrastructure.
 - Application does not depend on Avalonia.
 
-## Implemented in this step
+## Offline ZIP/FB2 import
 
-- Domain models: `LibraryProfile`, `Book`, `BookSource`, `Author`.
-- Enums: `LibraryType`, `SourceKind`, `FileFormat`.
-- `ILibraryRepository` interface in Core.
-- SQLite schema initializer in Infrastructure.
-- `SqliteLibraryRepository` implementation using plain ADO.NET (`Microsoft.Data.Sqlite`).
-- Basic DI wiring for Application + Infrastructure.
-- Minimal Avalonia main window with placeholder library/books panels.
-- Initial unit test for repository add/get flow.
+Local folder libraries use:
 
-## Next implementation steps
+- an `.inpx` catalog for source configuration and fallback catalog loading
+- ZIP archives with `.fb2` entries for the indexed local book store
+- SQLite as the searchable local index
 
-1. Add library switching and active-library context service.
-2. Expand schema for books/authors/sources and indexes for large collections.
-3. Add background import pipeline for local folders and archive scanning.
-4. Introduce remote-library API adapters in Infrastructure.
-5. Add view models and observable UI bindings for library and books lists.
-6. Add packaging/update workflow for desktop distribution.
+### Current import behavior
 
-Flibusta is not part of the primary supported provider set.
+- ZIP archives are scanned as streams; archives are not extracted to disk.
+- FB2 entries are parsed directly from archive entry streams; entries are not buffered as whole archives in RAM.
+- Import runs as a bounded pipeline:
+  - one archive/entry producer
+  - a small FB2 parser worker pool
+  - one SQLite writer
+- SQLite writes are batched inside transactions to avoid per-book commits.
+- Duplicate rows are prevented by `(LibraryProfileId, ArchivePath, EntryPath)`.
+- Unchanged books are skipped by content hash.
+- Malformed FB2 files are recorded as failures and do not stop the import.
 
-If added later, it will be implemented only as an optional legacy compatibility adapter after phase 2.
+### Indexed metadata
+
+Initial import stores enough metadata for usable search and display:
+
+- title
+- authors
+- series
+- series number
+- genres
+- language
+- publish year when present in FB2
+- archive path
+- archive entry path
+- file name
+- file size
+
+Annotation text is indexed during import.
+
+Cover image decoding and thumbnail generation are intentionally deferred during bulk import so the first pass stays fast and memory-bounded.
+
+### Search and UI behavior
+
+- Once a library has indexed rows in SQLite, offline search and directory browsing use the indexed SQLite data.
+- This means the Main window and search results reflect imported metadata instead of depending on raw INPX fields.
+- Title, author, series, genres, language, year filters, and keyword search operate on the populated indexed fields.
+- Annotation participates in keyword search when it has been indexed.
+- Book content still opens directly from the ZIP archive entry.
+
+### INPX compatibility notes
+
+- Generic `structure.info`-based INPX files are supported.
+- Legacy Flibusta-style INPX archives without `structure.info` are also supported when the `.inp` files describe archive entries in the classic format.
+- For legacy Flibusta catalogs, the `.inp` file name is mapped to the matching `.zip` archive name.
+
+### Current limitations
+
+- Bulk import does not generate cover thumbnails during the initial pass.
+- If a library has not been imported yet, offline search falls back to the INPX catalog view.
+- Search uses regular SQLite indexed fields, not FTS.

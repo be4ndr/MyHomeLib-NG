@@ -54,7 +54,7 @@ public sealed class BookImportServiceTests
         var series = await ExecuteScalarAsync<string>(database.ConnectionString, "SELECT Series FROM Books;");
         var genres = await ExecuteScalarAsync<string>(database.ConnectionString, "SELECT Genres FROM Books;");
         var hash = await ExecuteScalarAsync<string>(database.ConnectionString, "SELECT ContentHash FROM Books;");
-        var thumbnailLength = await ExecuteScalarAsync<long>(database.ConnectionString, "SELECT length(CoverThumbnail) FROM Books;");
+        var thumbnailIsNull = await ExecuteScalarAsync<long>(database.ConnectionString, "SELECT CASE WHEN CoverThumbnail IS NULL THEN 1 ELSE 0 END FROM Books;");
 
         Assert.Equal(1L, rowCount);
         Assert.Equal("Imported Title", title);
@@ -62,7 +62,7 @@ public sealed class BookImportServiceTests
         Assert.Equal("Importer Saga", series);
         Assert.Equal("fantasy; adventure", genres);
         Assert.Equal(64, hash.Length);
-        Assert.True(thumbnailLength > 0);
+        Assert.Equal(1L, thumbnailIsNull);
     }
 
     [Fact]

@@ -1,5 +1,5 @@
-using System.Buffers;
 using System.Security.Cryptography;
+using System.Threading.Channels;
 using MyHomeLibNG.Core.Enums;
 using MyHomeLibNG.Core.Interfaces;
 using MyHomeLibNG.Core.Models;
@@ -8,18 +8,26 @@ namespace MyHomeLibNG.Application;
 
 public sealed class BookImportService
 {
+    private const int EntryChannelCapacity = 24;
+    private const int ParsedChannelCapacity = 24;
+    private const int BatchSize = 250;
+    private static readonly Fb2ParsingOptions ImportParsingOptions = Fb2ParsingOptions.FastImport;
+
     private readonly IZipArchiveScanner _zipArchiveScanner;
     private readonly IFb2MetadataParser _fb2MetadataParser;
     private readonly ILibraryRepository _libraryRepository;
+    private readonly int _parserWorkerCount;
 
     public BookImportService(
         IZipArchiveScanner zipArchiveScanner,
         IFb2MetadataParser fb2MetadataParser,
-        ILibraryRepository libraryRepository)
+        ILibraryRepository libraryRepository,
+        int? parserWorkerCount = null)
     {
         _zipArchiveScanner = zipArchiveScanner;
         _fb2MetadataParser = fb2MetadataParser;
         _libraryRepository = libraryRepository;
+        _parserWorkerCount = parserWorkerCount ?? Math.Clamp(Environment.ProcessorCount / 2, 2, 4);
     }
 
     public async Task<BookImportSummary> ImportLibraryAsync(
@@ -38,88 +46,175 @@ public sealed class BookImportService
         var scanPath = ResolveScanPath(profile, inputPath);
         var failures = new List<BookImportFailure>();
         var archivePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var sync = new object();
         var entriesDiscovered = 0;
-        var importedCount = 0;
         var booksAdded = 0;
         var booksUpdated = 0;
         var booksSkipped = 0;
+        var importedCount = 0;
+        var errorsCount = 0;
         var archivesProcessed = 0;
         string? currentArchive = null;
 
-        await foreach (var entry in _zipArchiveScanner.ScanAsync(scanPath, cancellationToken))
+        var entryChannel = Channel.CreateBounded<ZipArchiveBookEntry>(new BoundedChannelOptions(EntryChannelCapacity)
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            SingleWriter = true,
+            SingleReader = false,
+            FullMode = BoundedChannelFullMode.Wait
+        });
+        var parsedChannel = Channel.CreateBounded<ParsedBookResult>(new BoundedChannelOptions(ParsedChannelCapacity)
+        {
+            SingleWriter = false,
+            SingleReader = true,
+            FullMode = BoundedChannelFullMode.Wait
+        });
 
-            if (!string.Equals(currentArchive, entry.ArchivePath, StringComparison.OrdinalIgnoreCase))
-            {
-                if (currentArchive is not null)
-                {
-                    archivesProcessed++;
-                }
-
-                currentArchive = entry.ArchivePath;
-                ReportProgress(progress, currentArchive, archivesProcessed, entriesDiscovered, booksAdded, booksUpdated, booksSkipped, failures.Count,
-                    $"Scanning {Path.GetFileName(currentArchive)}", isImportant: true);
-            }
-
-            archivePaths.Add(entry.ArchivePath);
-            entriesDiscovered++;
-
+        var producerTask = Task.Run(async () =>
+        {
             try
             {
-                var record = await BuildImportRecordAsync(profile.Id, entry, cancellationToken);
-                var existing = await _libraryRepository.GetImportedBookMetadataAsync(
-                    profile.Id,
-                    entry.ArchivePath,
-                    entry.EntryPath,
-                    cancellationToken);
-
-                if (string.Equals(existing?.ContentHash, record.ContentHash, StringComparison.OrdinalIgnoreCase))
+                await foreach (var entry in _zipArchiveScanner.ScanAsync(scanPath, cancellationToken))
                 {
-                    booksSkipped++;
-                    ReportProgress(progress, currentArchive, archivesProcessed, entriesDiscovered, booksAdded, booksUpdated, booksSkipped, failures.Count,
-                        $"Skipped {record.Title} (unchanged).");
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    bool archiveChanged;
+                    lock (sync)
+                    {
+                        archiveChanged = !string.Equals(currentArchive, entry.ArchivePath, StringComparison.OrdinalIgnoreCase);
+                        if (archiveChanged)
+                        {
+                            if (currentArchive is not null)
+                            {
+                                archivesProcessed++;
+                            }
+
+                            currentArchive = entry.ArchivePath;
+                            archivePaths.Add(entry.ArchivePath);
+                        }
+
+                        entriesDiscovered++;
+                    }
+
+                    if (archiveChanged)
+                    {
+                        ReportProgress(progress, currentArchive, SnapshotArchivesProcessed(), SnapshotEntriesDiscovered(),
+                            SnapshotBooksAdded(), SnapshotBooksUpdated(), SnapshotBooksSkipped(), SnapshotErrorsCount(),
+                            $"Scanning {Path.GetFileName(currentArchive)}", isImportant: true);
+                    }
+
+                    await entryChannel.Writer.WriteAsync(entry, cancellationToken);
+                }
+            }
+            finally
+            {
+                lock (sync)
+                {
+                    if (currentArchive is not null)
+                    {
+                        archivesProcessed = archivePaths.Count;
+                    }
+                }
+
+                entryChannel.Writer.TryComplete();
+            }
+        }, CancellationToken.None);
+
+        var parserTasks = Enumerable.Range(0, _parserWorkerCount)
+            .Select(_ => Task.Run(async () =>
+            {
+                await foreach (var entry in entryChannel.Reader.ReadAllAsync(cancellationToken))
+                {
+                    try
+                    {
+                        var record = await BuildImportRecordAsync(profile.Id, entry, cancellationToken);
+                        await parsedChannel.Writer.WriteAsync(ParsedBookResult.Success(record), cancellationToken);
+                    }
+                    catch (Exception exception) when (exception is not OperationCanceledException)
+                    {
+                        await parsedChannel.Writer.WriteAsync(
+                            ParsedBookResult.Failure(new BookImportFailure
+                            {
+                                ArchivePath = entry.ArchivePath,
+                                EntryPath = entry.EntryPath,
+                                Message = exception.Message
+                            }),
+                            cancellationToken);
+                    }
+                }
+            }, CancellationToken.None))
+            .ToArray();
+
+        var writerTask = Task.Run(async () =>
+        {
+            var batch = new List<BookImportRecord>(BatchSize);
+
+            await foreach (var result in parsedChannel.Reader.ReadAllAsync(cancellationToken))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if (result.ImportFailure is not null)
+                {
+                    lock (sync)
+                    {
+                        failures.Add(result.ImportFailure);
+                        errorsCount++;
+                    }
+
+                    ReportProgress(progress, currentArchive, SnapshotArchivesProcessed(), SnapshotEntriesDiscovered(),
+                        SnapshotBooksAdded(), SnapshotBooksUpdated(), SnapshotBooksSkipped(), SnapshotErrorsCount(),
+                        $"Error in {result.ImportFailure.EntryPath}: {result.ImportFailure.Message}",
+                        isImportant: true);
                     continue;
                 }
 
-                await _libraryRepository.UpsertImportedBookAsync(record, cancellationToken);
-                importedCount++;
-
-                if (existing is null)
+                batch.Add(result.Record!);
+                if (batch.Count >= BatchSize)
                 {
-                    booksAdded++;
-                    ReportProgress(progress, currentArchive, archivesProcessed, entriesDiscovered, booksAdded, booksUpdated, booksSkipped, failures.Count,
-                        $"Added {record.Title}.");
-                }
-                else
-                {
-                    booksUpdated++;
-                    ReportProgress(progress, currentArchive, archivesProcessed, entriesDiscovered, booksAdded, booksUpdated, booksSkipped, failures.Count,
-                        $"Updated {record.Title}.");
+                    await FlushBatchAsync(batch, cancellationToken);
                 }
             }
-            catch (Exception exception) when (exception is not OperationCanceledException)
+
+            if (batch.Count > 0)
             {
-                failures.Add(new BookImportFailure
-                {
-                    ArchivePath = entry.ArchivePath,
-                    EntryPath = entry.EntryPath,
-                    Message = exception.Message
-                });
-
-                ReportProgress(progress, currentArchive, archivesProcessed, entriesDiscovered, booksAdded, booksUpdated, booksSkipped, failures.Count,
-                    $"Error in {entry.EntryPath}: {exception.Message}",
-                    isImportant: true);
+                await FlushBatchAsync(batch, cancellationToken);
             }
-        }
 
-        if (currentArchive is not null)
+            async Task FlushBatchAsync(List<BookImportRecord> records, CancellationToken token)
+            {
+                var batchResult = await WriteBatchWithFallbackAsync(records, failures, token);
+                lock (sync)
+                {
+                    booksAdded += batchResult.BooksAdded;
+                    booksUpdated += batchResult.BooksUpdated;
+                    booksSkipped += batchResult.BooksSkipped;
+                    importedCount += batchResult.BooksAdded + batchResult.BooksUpdated;
+                    errorsCount = failures.Count;
+                }
+
+                ReportProgress(progress, currentArchive, SnapshotArchivesProcessed(), SnapshotEntriesDiscovered(),
+                    SnapshotBooksAdded(), SnapshotBooksUpdated(), SnapshotBooksSkipped(), SnapshotErrorsCount(),
+                    $"Indexed {records.Count} book{(records.Count == 1 ? string.Empty : "s")}.");
+                records.Clear();
+            }
+        }, CancellationToken.None);
+
+        try
         {
-            archivesProcessed++;
+            await producerTask;
+            await Task.WhenAll(parserTasks);
+            parsedChannel.Writer.TryComplete();
+            await writerTask;
+        }
+        catch
+        {
+            entryChannel.Writer.TryComplete();
+            parsedChannel.Writer.TryComplete();
+            throw;
         }
 
-        ReportProgress(progress, currentArchive, archivesProcessed, entriesDiscovered, booksAdded, booksUpdated, booksSkipped, failures.Count,
-            $"Completed scan: {importedCount} imported, {booksSkipped} skipped, {failures.Count} errors.",
+        ReportProgress(progress, currentArchive, SnapshotArchivesProcessed(), SnapshotEntriesDiscovered(),
+            SnapshotBooksAdded(), SnapshotBooksUpdated(), SnapshotBooksSkipped(), SnapshotErrorsCount(),
+            $"Completed scan: {importedCount} imported, {booksSkipped} skipped, {errorsCount} errors.",
             isImportant: true,
             isCompleted: true);
 
@@ -134,6 +229,110 @@ public sealed class BookImportService
             ImportedCount = importedCount,
             Failures = failures
         };
+
+        int SnapshotEntriesDiscovered()
+        {
+            lock (sync)
+            {
+                return entriesDiscovered;
+            }
+        }
+
+        int SnapshotBooksAdded()
+        {
+            lock (sync)
+            {
+                return booksAdded;
+            }
+        }
+
+        int SnapshotBooksUpdated()
+        {
+            lock (sync)
+            {
+                return booksUpdated;
+            }
+        }
+
+        int SnapshotBooksSkipped()
+        {
+            lock (sync)
+            {
+                return booksSkipped;
+            }
+        }
+
+        int SnapshotErrorsCount()
+        {
+            lock (sync)
+            {
+                return errorsCount;
+            }
+        }
+
+        int SnapshotArchivesProcessed()
+        {
+            lock (sync)
+            {
+                return archivesProcessed;
+            }
+        }
+    }
+
+    private async Task<BookImportBatchResult> WriteBatchWithFallbackAsync(
+        IReadOnlyList<BookImportRecord> records,
+        List<BookImportFailure> failures,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await _libraryRepository.UpsertImportedBooksAsync(records, cancellationToken);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            if (records.Count == 1)
+            {
+                failures.Add(new BookImportFailure
+                {
+                    ArchivePath = records[0].ArchivePath,
+                    EntryPath = records[0].EntryPath,
+                    Message = exception.Message
+                });
+
+                return new BookImportBatchResult();
+            }
+        }
+
+        var fallbackAdded = 0;
+        var fallbackUpdated = 0;
+        var fallbackSkipped = 0;
+
+        foreach (var record in records)
+        {
+            try
+            {
+                var singleResult = await _libraryRepository.UpsertImportedBooksAsync([record], cancellationToken);
+                fallbackAdded += singleResult.BooksAdded;
+                fallbackUpdated += singleResult.BooksUpdated;
+                fallbackSkipped += singleResult.BooksSkipped;
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                failures.Add(new BookImportFailure
+                {
+                    ArchivePath = record.ArchivePath,
+                    EntryPath = record.EntryPath,
+                    Message = exception.Message
+                });
+            }
+        }
+
+        return new BookImportBatchResult
+        {
+            BooksAdded = fallbackAdded,
+            BooksUpdated = fallbackUpdated,
+            BooksSkipped = fallbackSkipped
+        };
     }
 
     private async Task<BookImportRecord> BuildImportRecordAsync(
@@ -142,33 +341,9 @@ public sealed class BookImportService
         CancellationToken cancellationToken)
     {
         await using var stream = await entry.OpenReadAsync(cancellationToken);
-        await using var buffer = new MemoryStream(entry.FileSize > 0 && entry.FileSize <= int.MaxValue
-            ? (int)entry.FileSize
-            : 0);
         using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-        var rentedBuffer = ArrayPool<byte>.Shared.Rent(81920);
-
-        try
-        {
-            while (true)
-            {
-                var bytesRead = await stream.ReadAsync(rentedBuffer.AsMemory(0, rentedBuffer.Length), cancellationToken);
-                if (bytesRead == 0)
-                {
-                    break;
-                }
-
-                hash.AppendData(rentedBuffer, 0, bytesRead);
-                await buffer.WriteAsync(rentedBuffer.AsMemory(0, bytesRead), cancellationToken);
-            }
-        }
-        finally
-        {
-            ArrayPool<byte>.Shared.Return(rentedBuffer);
-        }
-
-        buffer.Position = 0;
-        var metadata = await _fb2MetadataParser.ParseAsync(buffer, cancellationToken);
+        await using var hashingStream = new HashingReadStream(stream, hash);
+        var metadata = await _fb2MetadataParser.ParseAsync(hashingStream, ImportParsingOptions, cancellationToken);
         var timestamp = DateTimeOffset.UtcNow;
 
         return new BookImportRecord
@@ -251,5 +426,110 @@ public sealed class BookImportService
             IsImportant = isImportant,
             IsCompleted = isCompleted
         });
+    }
+
+    private sealed class ParsedBookResult
+    {
+        public BookImportRecord? Record { get; private init; }
+        public BookImportFailure? ImportFailure { get; private init; }
+
+        public static ParsedBookResult Success(BookImportRecord record)
+            => new() { Record = record };
+
+        public static ParsedBookResult Failure(BookImportFailure importFailure)
+            => new() { ImportFailure = importFailure };
+    }
+
+    private sealed class HashingReadStream : Stream
+    {
+        private readonly Stream _innerStream;
+        private readonly IncrementalHash _hash;
+
+        public HashingReadStream(Stream innerStream, IncrementalHash hash)
+        {
+            _innerStream = innerStream;
+            _hash = hash;
+        }
+
+        public override bool CanRead => _innerStream.CanRead;
+        public override bool CanSeek => _innerStream.CanSeek;
+        public override bool CanWrite => false;
+        public override long Length => _innerStream.Length;
+
+        public override long Position
+        {
+            get => _innerStream.Position;
+            set => _innerStream.Position = value;
+        }
+
+        public override void Flush()
+            => _innerStream.Flush();
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            var bytesRead = _innerStream.Read(buffer, offset, count);
+            if (bytesRead > 0)
+            {
+                _hash.AppendData(buffer, offset, bytesRead);
+            }
+
+            return bytesRead;
+        }
+
+        public override int Read(Span<byte> buffer)
+        {
+            var bytesRead = _innerStream.Read(buffer);
+            if (bytesRead > 0)
+            {
+                _hash.AppendData(buffer[..bytesRead]);
+            }
+
+            return bytesRead;
+        }
+
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            var bytesRead = await _innerStream.ReadAsync(buffer, cancellationToken);
+            if (bytesRead > 0)
+            {
+                _hash.AppendData(buffer[..bytesRead].Span);
+            }
+
+            return bytesRead;
+        }
+
+        public override long Seek(long offset, SeekOrigin origin)
+            => _innerStream.Seek(offset, origin);
+
+        public override void SetLength(long value)
+            => throw new NotSupportedException();
+
+        public override void Write(byte[] buffer, int offset, int count)
+            => throw new NotSupportedException();
+
+        public override void Write(ReadOnlySpan<byte> buffer)
+            => throw new NotSupportedException();
+
+        public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+            => throw new NotSupportedException();
+
+        public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                _innerStream.Dispose();
+            }
+
+            base.Dispose(disposing);
+        }
+
+        public override async ValueTask DisposeAsync()
+        {
+            await _innerStream.DisposeAsync();
+            await base.DisposeAsync();
+        }
     }
 }

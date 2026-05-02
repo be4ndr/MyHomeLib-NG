@@ -6,6 +6,25 @@ namespace MyHomeLibNG.Infrastructure.Providers.Offline;
 
 public sealed class InpxCatalogParser : IInpxCatalogParser
 {
+    private static readonly string[] LegacyFlibustaColumns =
+    [
+        "authors",
+        "genres",
+        "title",
+        "series",
+        "series_number",
+        "source_id",
+        "file_size",
+        "lib_id",
+        "deleted",
+        "format",
+        "updated_at",
+        "language",
+        "rating",
+        "keywords",
+        "identifier"
+    ];
+
     private static readonly string[] DefaultColumns =
     [
         "source_id",
@@ -37,6 +56,7 @@ public sealed class InpxCatalogParser : IInpxCatalogParser
             {
                 await using var entryStream = archiveEntry.Open();
                 using var reader = new StreamReader(entryStream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+                var inferredContainerPath = Path.ChangeExtension(archiveEntry.Name, ".zip");
 
                 while (!reader.EndOfStream)
                 {
@@ -48,7 +68,7 @@ public sealed class InpxCatalogParser : IInpxCatalogParser
                         continue;
                     }
 
-                    var parsed = ParseLine(line, columns, sourceName);
+                    var parsed = ParseLine(line, columns, sourceName, inferredContainerPath);
                     if (parsed is not null)
                     {
                         items.Add(parsed);
@@ -72,7 +92,7 @@ public sealed class InpxCatalogParser : IInpxCatalogParser
         var structureEntry = archive.Entries.FirstOrDefault(entry => string.Equals(entry.Name, "structure.info", StringComparison.OrdinalIgnoreCase));
         if (structureEntry is null)
         {
-            return DefaultColumns;
+            return LegacyFlibustaColumns;
         }
 
         await using var stream = structureEntry.Open();
@@ -87,12 +107,21 @@ public sealed class InpxCatalogParser : IInpxCatalogParser
         return columns.Length == 0 ? DefaultColumns : columns;
     }
 
-    private static OfflineCatalogEntry? ParseLine(string line, IReadOnlyList<string> columns, string sourceName)
+    private static OfflineCatalogEntry? ParseLine(
+        string line,
+        IReadOnlyList<string> columns,
+        string sourceName,
+        string inferredContainerPath)
     {
         var values = line.Split('\u0004');
         if (values.Length == 0)
         {
             return null;
+        }
+
+        if (LooksLikeLegacyFlibustaRow(columns, values))
+        {
+            return ParseLegacyFlibustaLine(values, sourceName, inferredContainerPath);
         }
 
         var data = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
@@ -135,6 +164,54 @@ public sealed class InpxCatalogParser : IInpxCatalogParser
         };
     }
 
+    private static bool LooksLikeLegacyFlibustaRow(IReadOnlyList<string> columns, IReadOnlyList<string> values)
+    {
+        return ReferenceEquals(columns, LegacyFlibustaColumns) ||
+               (values.Count >= 10 &&
+                values[0].Contains(',') &&
+                string.Equals(values[9], "fb2", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static OfflineCatalogEntry? ParseLegacyFlibustaLine(
+        IReadOnlyList<string> values,
+        string sourceName,
+        string inferredContainerPath)
+    {
+        if (values.Count < 10)
+        {
+            return null;
+        }
+
+        var sourceId = NullIfEmpty(values[5]);
+        var title = NullIfEmpty(values[2]);
+        var format = NullIfEmpty(values[9]) ?? "fb2";
+        var archiveEntryPath = sourceId is null ? null : $"{sourceId}.{format}";
+        if (sourceId is null || title is null || archiveEntryPath is null)
+        {
+            return null;
+        }
+
+        return new OfflineCatalogEntry
+        {
+            Book = new NormalizedBook
+            {
+                Source = sourceName,
+                SourceId = sourceId,
+                Title = title,
+                Authors = ParseLegacyAuthors(values[0]),
+                Series = NullIfEmpty(values.ElementAtOrDefault(3)),
+                Language = NullIfEmpty(values.ElementAtOrDefault(11)),
+                Description = null,
+                Subjects = SplitLegacyValues(values[1], ':'),
+                Publisher = null,
+                PublishedYear = null,
+                Formats = [format.ToLowerInvariant()]
+            },
+            ContainerPath = inferredContainerPath,
+            ArchiveEntryPath = archiveEntryPath
+        };
+    }
+
     private static IReadOnlyList<string> SplitList(string? value)
     {
         return string.IsNullOrWhiteSpace(value)
@@ -143,6 +220,43 @@ public sealed class InpxCatalogParser : IInpxCatalogParser
                 .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                 .Where(item => !string.IsNullOrWhiteSpace(item))
                 .ToArray();
+    }
+
+    private static IReadOnlyList<string> ParseLegacyAuthors(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return Array.Empty<string>();
+        }
+
+        return value
+            .Split(':', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(item => item.Replace(',', ' '))
+            .Select(NormalizeAuthorWhitespace)
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static IReadOnlyList<string> SplitLegacyValues(string? value, char separator)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return Array.Empty<string>();
+        }
+
+        return value
+            .Split(separator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(item => item.Trim().Trim(':'))
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static string NormalizeAuthorWhitespace(string value)
+    {
+        return string.Join(" ", value
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
     }
 
     private static IReadOnlyList<string> BuildFormats(string containerPath, string? archiveEntryPath)

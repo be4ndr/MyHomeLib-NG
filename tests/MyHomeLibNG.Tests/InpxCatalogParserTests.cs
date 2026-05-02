@@ -35,6 +35,28 @@ public sealed class InpxCatalogParserTests
         Assert.Empty(results);
     }
 
+    [Fact]
+    public async Task ParseAsync_ParsesLegacyFlibustaRowsWithoutStructureInfo()
+    {
+        var parser = new InpxCatalogParser();
+        await using var stream = new MemoryStream(BuildArchive(
+            "collection.info", "fixture",
+            "d.fb2-000001-000100.inp", "Surname,Name,Patronymic:\u0004sf_fantasy:\u0004Legacy Title\u0004Legacy Series\u00042\u0004110119\u00041230745\u0004110119\u00040\u0004fb2\u00042008-07-05\u0004ru\u00043\u0004\u0004"));
+
+        var results = await parser.ParseAsync(stream, "Offline Fixture");
+
+        var result = Assert.Single(results);
+        Assert.Equal("110119", result.Book.SourceId);
+        Assert.Equal("Legacy Title", result.Book.Title);
+        Assert.Equal(["Surname Name Patronymic"], result.Book.Authors);
+        Assert.Equal("Legacy Series", result.Book.Series);
+        Assert.Equal(["sf_fantasy"], result.Book.Subjects);
+        Assert.Equal("ru", result.Book.Language);
+        Assert.Equal("d.fb2-000001-000100.zip", result.ContainerPath);
+        Assert.Equal("110119.fb2", result.ArchiveEntryPath);
+        Assert.Equal(["fb2"], result.Book.Formats);
+    }
+
     private static byte[] BuildArchive(string structureName, string structureContent, string dataName, string dataContent)
     {
         using var memory = new MemoryStream();

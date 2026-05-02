@@ -92,7 +92,21 @@ public sealed class ActiveLibraryContextTests
             CancellationToken cancellationToken = default)
             => Task.FromResult<ImportedBookMetadataSnapshot?>(null);
 
+        public Task<long> GetImportedBookCountAsync(long libraryProfileId, CancellationToken cancellationToken = default)
+            => Task.FromResult(0L);
+
+        public Task<IReadOnlyList<ImportedBookMetadataSnapshot>> SearchImportedBooksAsync(
+            long libraryProfileId,
+            string query,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<ImportedBookMetadataSnapshot>>(Array.Empty<ImportedBookMetadataSnapshot>());
+
         public Task<long> UpsertImportedBookAsync(BookImportRecord book, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<BookImportBatchResult> UpsertImportedBooksAsync(
+            IReadOnlyList<BookImportRecord> books,
+            CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
         public Task DeleteAsync(long libraryId, CancellationToken cancellationToken = default)
