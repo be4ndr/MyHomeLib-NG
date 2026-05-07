@@ -159,7 +159,7 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
         var hasQuery = queryTokens.Length > 0;
         var whereClause = hasQuery
             ? string.Join(" AND ", queryTokens.Select((_, index) =>
-                $"(Title LIKE $likeQuery{index} ESCAPE '\\' OR Authors LIKE $likeQuery{index} ESCAPE '\\' OR Series LIKE $likeQuery{index} ESCAPE '\\' OR Genres LIKE $likeQuery{index} ESCAPE '\\' OR Annotation LIKE $likeQuery{index} ESCAPE '\\' OR Language LIKE $likeQuery{index} ESCAPE '\\' OR FileName LIKE $likeQuery{index} ESCAPE '\\' OR EntryPath LIKE $likeQuery{index} ESCAPE '\\' OR ArchivePath LIKE $likeQuery{index} ESCAPE '\\')"))
+                $"(Title LIKE $likeQuery{index} ESCAPE '\\' OR Authors LIKE $likeQuery{index} ESCAPE '\\' OR Series LIKE $likeQuery{index} ESCAPE '\\' OR Genres LIKE $likeQuery{index} ESCAPE '\\' OR Annotation LIKE $likeQuery{index} ESCAPE '\\' OR Language LIKE $likeQuery{index} ESCAPE '\\' OR FileName LIKE $likeQuery{index} ESCAPE '\\' OR EntryPath LIKE $likeQuery{index} ESCAPE '\\' OR ArchivePath LIKE $likeQuery{index} ESCAPE '\\' OR LibId LIKE $likeQuery{index} ESCAPE '\\')"))
             : "1=1";
 
         command.CommandText = $"""
@@ -175,6 +175,7 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
                                      EntryPath,
                                      FileName,
                                      FileSize,
+                                     LibId,
                                      ContentHash,
                                      CoverThumbnail
                               FROM Books
@@ -258,9 +259,9 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
             cancellationToken.ThrowIfCancellationRequested();
 
             var key = (book.LibraryProfileId, book.ArchivePath, book.EntryPath);
-            existingHashes.TryGetValue(key, out var existingHash);
+            var hasExisting = existingHashes.TryGetValue(key, out var existingHash);
 
-            if (string.Equals(existingHash, book.ContentHash, StringComparison.OrdinalIgnoreCase))
+            if (hasExisting && string.Equals(existingHash, book.ContentHash, StringComparison.OrdinalIgnoreCase))
             {
                 booksSkipped++;
                 continue;
@@ -269,7 +270,7 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
             ApplyUpsertParameters(upsertCommand, book);
             await upsertCommand.ExecuteNonQueryAsync(cancellationToken);
 
-            if (existingHash is null)
+            if (!hasExisting)
             {
                 booksAdded++;
             }
@@ -409,8 +410,9 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
             EntryPath = reader.GetString(9),
             FileName = GetNullableString(reader, 10),
             FileSize = reader.IsDBNull(11) ? null : reader.GetInt64(11),
-            ContentHash = GetNullableString(reader, 12),
-            CoverThumbnail = reader.IsDBNull(13) ? null : (byte[])reader[13]
+            LibId = GetNullableString(reader, 12),
+            ContentHash = GetNullableString(reader, 13),
+            CoverThumbnail = reader.IsDBNull(14) ? null : (byte[])reader[14]
         };
     }
 
@@ -430,6 +432,7 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
                                      EntryPath,
                                      FileName,
                                      FileSize,
+                                     LibId,
                                      ContentHash,
                                      CoverThumbnail
                               FROM Books
@@ -463,6 +466,7 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
                                   EntryPath,
                                   FileName,
                                   FileSize,
+                                  LibId,
                                   ContentHash,
                                   CoverThumbnail,
                                   CreatedAt,
@@ -482,6 +486,7 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
                                   $entryPath,
                                   $fileName,
                                   $fileSize,
+                                  $libId,
                                   $contentHash,
                                   $coverThumbnail,
                                   $createdAt,
@@ -498,6 +503,7 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
                                   Language = excluded.Language,
                                   FileName = excluded.FileName,
                                   FileSize = excluded.FileSize,
+                                  LibId = excluded.LibId,
                                   ContentHash = excluded.ContentHash,
                                   CoverThumbnail = excluded.CoverThumbnail,
                                   UpdatedAt = excluded.UpdatedAt;
@@ -516,6 +522,7 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
         command.Parameters.AddWithValue("$entryPath", string.Empty);
         command.Parameters.AddWithValue("$fileName", DBNull.Value);
         command.Parameters.AddWithValue("$fileSize", DBNull.Value);
+        command.Parameters.AddWithValue("$libId", DBNull.Value);
         command.Parameters.AddWithValue("$contentHash", DBNull.Value);
         command.Parameters.AddWithValue("$coverThumbnail", DBNull.Value);
         command.Parameters.AddWithValue("$createdAt", string.Empty);
@@ -539,6 +546,7 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
         command.Parameters["$entryPath"].Value = book.EntryPath;
         command.Parameters["$fileName"].Value = book.FileName ?? (object)DBNull.Value;
         command.Parameters["$fileSize"].Value = book.FileSize ?? (object)DBNull.Value;
+        command.Parameters["$libId"].Value = book.LibId ?? (object)DBNull.Value;
         command.Parameters["$contentHash"].Value = book.ContentHash ?? (object)DBNull.Value;
         command.Parameters["$coverThumbnail"].Value = book.CoverThumbnail ?? (object)DBNull.Value;
         command.Parameters["$createdAt"].Value = book.CreatedAt.ToString("O");

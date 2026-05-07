@@ -141,6 +141,26 @@ public sealed class InpxCatalogParser : IInpxCatalogParser
         }
 
         data.TryGetValue("archive_entry_path", out var archiveEntryPath);
+        var seriesNumber = ParseInt(FirstValue(data, "series_number", "seq_number", "sequence_number"));
+        var fileSize = ParseLong(FirstValue(data, "file_size", "filesize", "size"));
+        var libId = NullIfEmpty(FirstValue(data, "lib_id", "library_id", "book_id"));
+        var publishedYear = ParseYear(
+            FirstValue(
+                data,
+                "published_year",
+                "publish_year",
+                "year",
+                "publish_date",
+                "date",
+                "updated_at"));
+        var subjects = SplitList(FirstValue(data, "subjects", "genres"));
+        var series = NullIfEmpty(FirstValue(data, "series", "sequence"));
+        var language = NullIfEmpty(FirstValue(data, "language", "lang"));
+        var description = NullIfEmpty(FirstValue(data, "description", "annotation"));
+        var archivePath = ResolveArchiveEntryPath(
+            NullIfEmpty(archiveEntryPath),
+            sourceId,
+            FirstValue(data, "format", "ext", "extension"));
 
         return new OfflineCatalogEntry
         {
@@ -150,17 +170,21 @@ public sealed class InpxCatalogParser : IInpxCatalogParser
                 SourceId = sourceId,
                 Title = title,
                 Authors = SplitList(data.GetValueOrDefault("authors")),
-                Language = NullIfEmpty(data.GetValueOrDefault("language")),
-                Description = NullIfEmpty(data.GetValueOrDefault("description")),
-                Subjects = SplitList(data.GetValueOrDefault("subjects")),
+                Language = language,
+                Description = description,
+                Subjects = subjects,
                 Publisher = NullIfEmpty(data.GetValueOrDefault("publisher")),
-                PublishedYear = ParseYear(data.GetValueOrDefault("published_year")),
+                PublishedYear = publishedYear,
                 Isbn10 = NullIfEmpty(data.GetValueOrDefault("isbn10")),
                 Isbn13 = NullIfEmpty(data.GetValueOrDefault("isbn13")),
-                Formats = BuildFormats(containerPath, archiveEntryPath)
+                Series = series,
+                Formats = BuildFormats(containerPath, archivePath)
             },
             ContainerPath = containerPath,
-            ArchiveEntryPath = NullIfEmpty(archiveEntryPath)
+            ArchiveEntryPath = archivePath,
+            SeriesNumber = seriesNumber,
+            FileSize = fileSize,
+            LibId = libId
         };
     }
 
@@ -186,6 +210,10 @@ public sealed class InpxCatalogParser : IInpxCatalogParser
         var title = NullIfEmpty(values[2]);
         var format = NullIfEmpty(values[9]) ?? "fb2";
         var archiveEntryPath = sourceId is null ? null : $"{sourceId}.{format}";
+        var publishedYear = ParseYear(values.ElementAtOrDefault(10));
+        var seriesNumber = ParseInt(values.ElementAtOrDefault(4));
+        var fileSize = ParseLong(values.ElementAtOrDefault(6));
+        var libId = NullIfEmpty(values.ElementAtOrDefault(7));
         if (sourceId is null || title is null || archiveEntryPath is null)
         {
             return null;
@@ -200,16 +228,32 @@ public sealed class InpxCatalogParser : IInpxCatalogParser
                 Title = title,
                 Authors = ParseLegacyAuthors(values[0]),
                 Series = NullIfEmpty(values.ElementAtOrDefault(3)),
+                PublishedYear = publishedYear,
                 Language = NullIfEmpty(values.ElementAtOrDefault(11)),
                 Description = null,
                 Subjects = SplitLegacyValues(values[1], ':'),
                 Publisher = null,
-                PublishedYear = null,
                 Formats = [format.ToLowerInvariant()]
             },
             ContainerPath = inferredContainerPath,
-            ArchiveEntryPath = archiveEntryPath
+            ArchiveEntryPath = archiveEntryPath,
+            SeriesNumber = seriesNumber,
+            FileSize = fileSize,
+            LibId = libId
         };
+    }
+
+    private static string? FirstValue(IReadOnlyDictionary<string, string?> data, params string[] keys)
+    {
+        foreach (var key in keys)
+        {
+            if (data.TryGetValue(key, out var value) && !string.IsNullOrWhiteSpace(value))
+            {
+                return value;
+            }
+        }
+
+        return null;
     }
 
     private static IReadOnlyList<string> SplitList(string? value)
@@ -259,6 +303,22 @@ public sealed class InpxCatalogParser : IInpxCatalogParser
             .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
     }
 
+    private static string? ResolveArchiveEntryPath(string? archiveEntryPath, string sourceId, string? format)
+    {
+        if (!string.IsNullOrWhiteSpace(archiveEntryPath))
+        {
+            return archiveEntryPath;
+        }
+
+        var normalizedFormat = NullIfEmpty(format);
+        if (normalizedFormat is null)
+        {
+            return null;
+        }
+
+        return $"{sourceId}.{normalizedFormat.TrimStart('.')}";
+    }
+
     private static IReadOnlyList<string> BuildFormats(string containerPath, string? archiveEntryPath)
     {
         var source = string.IsNullOrWhiteSpace(archiveEntryPath) ? containerPath : archiveEntryPath;
@@ -270,5 +330,28 @@ public sealed class InpxCatalogParser : IInpxCatalogParser
         => string.IsNullOrWhiteSpace(value) ? null : value;
 
     private static int? ParseYear(string? value)
-        => int.TryParse(value, out var year) ? year : null;
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        if (int.TryParse(value, out var directYear))
+        {
+            return directYear;
+        }
+
+        if (value.Length >= 4 && int.TryParse(value[..4], out var prefixYear))
+        {
+            return prefixYear;
+        }
+
+        return null;
+    }
+
+    private static int? ParseInt(string? value)
+        => int.TryParse(value, out var parsed) ? parsed : null;
+
+    private static long? ParseLong(string? value)
+        => long.TryParse(value, out var parsed) ? parsed : null;
 }

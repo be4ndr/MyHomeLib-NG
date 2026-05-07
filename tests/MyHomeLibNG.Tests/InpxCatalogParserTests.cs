@@ -12,9 +12,9 @@ public sealed class InpxCatalogParserTests
     {
         var parser = new InpxCatalogParser();
         await using var stream = new MemoryStream(BuildArchive(
-            "structure.info", "source_id,title,authors,language,description,subjects,publisher,published_year,isbn10,isbn13,container_path,archive_entry_path",
-            "catalog.inp", "id-1\u0004Book One\u0004Jane Doe\u0004en\u0004Desc\u0004Subject\u0004Press\u00042024\u0004\u0004\u0004folder/book-one.fb2\u0004\n" +
-                           "id-1\u0004Duplicate\u0004Jane Doe\u0004en\u0004Desc\u0004Subject\u0004Press\u00042024\u0004\u0004\u0004folder/book-one.fb2\u0004\n" +
+            "structure.info", "source_id,title,authors,language,description,subjects,publisher,published_year,isbn10,isbn13,container_path,archive_entry_path,series,series_number,file_size,lib_id",
+            "catalog.inp", "id-1\u0004Book One\u0004Jane Doe\u0004en\u0004Desc\u0004Subject\u0004Press\u00042024\u0004\u0004\u0004books.zip\u0004folder/book-one.fb2\u0004Saga\u00042\u0004512\u0004lib-42\n" +
+                           "id-1\u0004Duplicate\u0004Jane Doe\u0004en\u0004Desc\u0004Subject\u0004Press\u00042024\u0004\u0004\u0004books.zip\u0004folder/book-one.fb2\u0004Saga\u00042\u0004512\u0004lib-42\n" +
                            "broken-row"));
 
         var results = await parser.ParseAsync(stream, "Offline Fixture");
@@ -22,6 +22,12 @@ public sealed class InpxCatalogParserTests
         Assert.Single(results);
         Assert.Equal("id-1", results[0].Book.SourceId);
         Assert.Equal("Book One", results[0].Book.Title);
+        Assert.Equal("Saga", results[0].Book.Series);
+        Assert.Equal(2, results[0].SeriesNumber);
+        Assert.Equal(512, results[0].FileSize);
+        Assert.Equal("lib-42", results[0].LibId);
+        Assert.Equal("books.zip", results[0].ContainerPath);
+        Assert.Equal("folder/book-one.fb2", results[0].ArchiveEntryPath);
     }
 
     [Fact]
@@ -50,6 +56,10 @@ public sealed class InpxCatalogParserTests
         Assert.Equal("Legacy Title", result.Book.Title);
         Assert.Equal(["Surname Name Patronymic"], result.Book.Authors);
         Assert.Equal("Legacy Series", result.Book.Series);
+        Assert.Equal(2, result.SeriesNumber);
+        Assert.Equal(1230745, result.FileSize);
+        Assert.Equal("110119", result.LibId);
+        Assert.Equal(2008, result.Book.PublishedYear);
         Assert.Equal(["sf_fantasy"], result.Book.Subjects);
         Assert.Equal("ru", result.Book.Language);
         Assert.Equal("d.fb2-000001-000100.zip", result.ContainerPath);

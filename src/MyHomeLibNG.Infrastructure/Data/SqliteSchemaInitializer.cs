@@ -70,6 +70,7 @@ public sealed class SqliteSchemaInitializer
                                EntryPath TEXT NOT NULL,
                                FileName TEXT NULL,
                                FileSize INTEGER NULL,
+                               LibId TEXT NULL,
                                ContentHash TEXT NULL,
                                CoverThumbnail BLOB NULL,
                                CreatedAt TEXT NOT NULL,
@@ -93,6 +94,7 @@ public sealed class SqliteSchemaInitializer
         await EnsureColumnAsync(connection, "Books", "EntryPath", "TEXT NOT NULL DEFAULT ''", cancellationToken);
         await EnsureColumnAsync(connection, "Books", "FileName", "TEXT NULL", cancellationToken);
         await EnsureColumnAsync(connection, "Books", "FileSize", "INTEGER NULL", cancellationToken);
+        await EnsureColumnAsync(connection, "Books", "LibId", "TEXT NULL", cancellationToken);
         await EnsureColumnAsync(connection, "Books", "ContentHash", "TEXT NULL", cancellationToken);
         await EnsureColumnAsync(connection, "Books", "CoverThumbnail", "BLOB NULL", cancellationToken);
         await EnsureColumnAsync(connection, "Books", "CreatedAt", "TEXT NOT NULL DEFAULT '0001-01-01T00:00:00.0000000+00:00'", cancellationToken);

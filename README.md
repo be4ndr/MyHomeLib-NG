@@ -57,16 +57,12 @@ Local folder libraries use:
 
 ### Current import behavior
 
-- ZIP archives are scanned as streams; archives are not extracted to disk.
-- FB2 entries are parsed directly from archive entry streams; entries are not buffered as whole archives in RAM.
-- Import runs as a bounded pipeline:
-  - one archive/entry producer
-  - a small FB2 parser worker pool
-  - one SQLite writer
-- SQLite writes are batched inside transactions to avoid per-book commits.
-- Duplicate rows are prevented by `(LibraryProfileId, ArchivePath, EntryPath)`.
-- Unchanged books are skipped by content hash.
-- Malformed FB2 files are recorded as failures and do not stop the import.
+- Initial local indexing is **INPX-first**:
+  - `.inpx` is parsed first and mapped directly into SQLite book rows.
+  - ZIP archives and FB2 parsing are skipped during that initial pass.
+- SQLite writes are batched inside transactions and use UPSERT by `(LibraryProfileId, ArchivePath, EntryPath)`.
+- If INPX parsing yields no importable rows, import falls back to the ZIP/FB2 scanning pipeline.
+- ZIP/FB2 parsing code is preserved for fallback and future lazy metadata enrichment.
 
 ### Indexed metadata
 
@@ -78,11 +74,12 @@ Initial import stores enough metadata for usable search and display:
 - series number
 - genres
 - language
-- publish year when present in FB2
+- publish year/date (year extracted when available)
 - archive path
 - archive entry path
 - file name
 - file size
+- lib id when available from INPX
 
 Annotation and cover extraction are skipped during bulk import to keep throughput high.
 
