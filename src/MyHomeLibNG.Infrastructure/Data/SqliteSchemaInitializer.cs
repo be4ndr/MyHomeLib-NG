@@ -96,6 +96,7 @@ public sealed class SqliteSchemaInitializer
         await EnsureColumnAsync(connection, "Books", "FileSize", "INTEGER NULL", cancellationToken);
         await EnsureColumnAsync(connection, "Books", "LibId", "TEXT NULL", cancellationToken);
         await EnsureColumnAsync(connection, "Books", "ContentHash", "TEXT NULL", cancellationToken);
+        await EnsureColumnAsync(connection, "Books", "SearchText", "TEXT NOT NULL DEFAULT ''", cancellationToken);
         await EnsureColumnAsync(connection, "Books", "CoverThumbnail", "BLOB NULL", cancellationToken);
         await EnsureColumnAsync(connection, "Books", "CreatedAt", "TEXT NOT NULL DEFAULT '0001-01-01T00:00:00.0000000+00:00'", cancellationToken);
         await EnsureColumnAsync(connection, "Books", "UpdatedAt", "TEXT NOT NULL DEFAULT '0001-01-01T00:00:00.0000000+00:00'", cancellationToken);
@@ -117,6 +118,12 @@ public sealed class SqliteSchemaInitializer
                                           ON Books (LibraryProfileId, Title COLLATE NOCASE, Authors COLLATE NOCASE, EntryPath COLLATE NOCASE);
                                           """;
         await ExecuteNonQueryAsync(connection, searchSortIndexSql, cancellationToken);
+
+        const string normalizedSearchIndexSql = """
+                                                CREATE INDEX IF NOT EXISTS IX_Books_LibraryProfileId_SearchText
+                                                ON Books (LibraryProfileId, SearchText);
+                                                """;
+        await ExecuteNonQueryAsync(connection, normalizedSearchIndexSql, cancellationToken);
     }
 
     private static async Task EnsureColumnAsync(

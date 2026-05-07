@@ -100,6 +100,25 @@ public sealed class ExampleDatasetImportValidationTests
         var providerSearchResults = await provider.SearchAsync(titleToken!);
         Assert.NotEmpty(providerSearchResults);
 
+        var repositoryLukLower = await repository.SearchImportedBooksAsync(profile.Id, "лукьяненко");
+        var repositoryLukUpper = await repository.SearchImportedBooksAsync(profile.Id, "Лукьяненко");
+        var repositoryIvanovLower = await repository.SearchImportedBooksAsync(profile.Id, "иванов");
+        var repositoryIvanovUpper = await repository.SearchImportedBooksAsync(profile.Id, "Иванов");
+        var repositoryDetective = await repository.SearchImportedBooksAsync(profile.Id, "детектив");
+        var repositorySciFi = await repository.SearchImportedBooksAsync(profile.Id, "фантастика");
+
+        Assert.Equal(repositoryLukUpper.Count, repositoryLukLower.Count);
+        Assert.Equal(repositoryIvanovUpper.Count, repositoryIvanovLower.Count);
+        Assert.True(repositoryLukLower.Count > 0);
+        Assert.True(repositoryIvanovLower.Count > 0);
+        Assert.True(repositoryDetective.Count > 0);
+        Assert.True(repositorySciFi.Count > 0);
+
+        var providerLukLower = await provider.SearchAsync("лукьяненко");
+        var providerLukUpper = await provider.SearchAsync("Лукьяненко");
+        Assert.Equal(repositoryLukLower.Count, providerLukLower.Count);
+        Assert.Equal(repositoryLukUpper.Count, providerLukUpper.Count);
+
         Console.WriteLine($"Example archive: {smallestArchive.Name}");
         Console.WriteLine($"Indexed count: {indexedCount}");
         Console.WriteLine($"Search example (title): {titleToken}");
@@ -115,6 +134,14 @@ public sealed class ExampleDatasetImportValidationTests
             Console.WriteLine($"Search example (genre): {genreToken}");
             Console.WriteLine($"Search result count (genre): {genreResults.Count}");
         }
+
+        Console.WriteLine($"Search 'лукьяненко': {repositoryLukLower.Count}");
+        Console.WriteLine($"Search 'Лукьяненко': {repositoryLukUpper.Count}");
+        Console.WriteLine($"Search 'иванов': {repositoryIvanovLower.Count}");
+        Console.WriteLine($"Search 'Иванов': {repositoryIvanovUpper.Count}");
+        Console.WriteLine($"Search 'детектив': {repositoryDetective.Count}");
+        Console.WriteLine($"Search 'фантастика': {repositorySciFi.Count}");
+        Console.WriteLine($"Provider search 'лукьяненко': {providerLukLower.Count}");
     }
 
     private static string? FirstToken(string? value)
