@@ -59,6 +59,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IOfflineContentStorage, ZipContentStorage>();
         services.AddSingleton<OfflineContentStorageRegistry>();
         services.AddSingleton<IZipArchiveScanner, ZipArchiveScanner>();
+        services.AddSingleton<IInpxLibraryIndexReader, InpxLibraryIndexReader>();
         services.AddSingleton<IBookProviderRegistration, OfflineBookProviderRegistration>();
         services.AddSingleton<IBookProviderRegistration, ProjectGutenbergBookProviderRegistration>();
         services.AddSingleton<IBookProviderRegistration, OpenLibraryBookProviderRegistration>();

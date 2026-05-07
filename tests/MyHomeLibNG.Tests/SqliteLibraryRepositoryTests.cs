@@ -146,6 +146,7 @@ public sealed class SqliteLibraryRepositoryTests
             Assert.Contains("EntryPath", columns);
             Assert.Contains("FileName", columns);
             Assert.Contains("FileSize", columns);
+            Assert.Contains("LibId", columns);
             Assert.Contains("ContentHash", columns);
             Assert.Contains("CoverThumbnail", columns);
             Assert.Contains("CreatedAt", columns);
@@ -211,6 +212,7 @@ public sealed class SqliteLibraryRepositoryTests
                 EntryPath = "books/original.fb2",
                 FileName = "original.fb2",
                 FileSize = 111,
+                LibId = "lib-1",
                 ContentHash = "hash-1",
                 CoverThumbnail = [1, 2, 3],
                 CreatedAt = createdAt,
@@ -233,6 +235,7 @@ public sealed class SqliteLibraryRepositoryTests
                 EntryPath = "books/original.fb2",
                 FileName = "updated.fb2",
                 FileSize = 222,
+                LibId = "lib-2",
                 ContentHash = "hash-2",
                 CoverThumbnail = [9, 8, 7],
                 CreatedAt = createdAt.AddDays(1),
@@ -247,6 +250,7 @@ public sealed class SqliteLibraryRepositoryTests
             var storedUpdatedAt = await ExecuteScalarAsync<string>(database.ConnectionString, "SELECT UpdatedAt FROM Books;");
             var storedFileName = await ExecuteScalarAsync<string>(database.ConnectionString, "SELECT FileName FROM Books;");
             var storedFileSize = await ExecuteScalarAsync<long>(database.ConnectionString, "SELECT FileSize FROM Books;");
+            var storedLibId = await ExecuteScalarAsync<string>(database.ConnectionString, "SELECT LibId FROM Books;");
             var storedContentHash = await ExecuteScalarAsync<string>(database.ConnectionString, "SELECT ContentHash FROM Books;");
 
             Assert.Equal(firstId, secondId);
@@ -258,6 +262,7 @@ public sealed class SqliteLibraryRepositoryTests
             Assert.Equal(finalUpdatedAt.ToString("O"), storedUpdatedAt);
             Assert.Equal("updated.fb2", storedFileName);
             Assert.Equal(222L, storedFileSize);
+            Assert.Equal("lib-2", storedLibId);
             Assert.Equal("hash-2", storedContentHash);
         }
         finally
@@ -289,6 +294,7 @@ public sealed class SqliteLibraryRepositoryTests
                 EntryPath = "books/indexed.fb2",
                 FileName = "indexed.fb2",
                 FileSize = 123,
+                LibId = "lib-indexed",
                 ContentHash = "hash-indexed",
                 CoverThumbnail = [7, 8, 9],
                 CreatedAt = DateTimeOffset.UtcNow,
@@ -308,6 +314,7 @@ public sealed class SqliteLibraryRepositoryTests
             Assert.Equal("Indexed series", metadata.Series);
             Assert.Equal("history; memoir", metadata.Genres);
             Assert.Equal("ru", metadata.Language);
+            Assert.Equal("lib-indexed", metadata.LibId);
             Assert.Equal("hash-indexed", metadata.ContentHash);
             Assert.Equal([7, 8, 9], metadata.CoverThumbnail);
         }
@@ -353,6 +360,7 @@ public sealed class SqliteLibraryRepositoryTests
                     EntryPath = "books/existing.fb2",
                     FileName = "existing.fb2",
                     FileSize = 101,
+                    LibId = "lib-existing",
                     ContentHash = "same-hash",
                     CreatedAt = timestamp,
                     UpdatedAt = timestamp.AddMinutes(1)
@@ -367,6 +375,7 @@ public sealed class SqliteLibraryRepositoryTests
                     EntryPath = "books/existing.fb2",
                     FileName = "existing.fb2",
                     FileSize = 202,
+                    LibId = "lib-existing-updated",
                     ContentHash = "new-hash",
                     CreatedAt = timestamp,
                     UpdatedAt = timestamp.AddMinutes(2)
@@ -381,6 +390,7 @@ public sealed class SqliteLibraryRepositoryTests
                     EntryPath = "books/new.fb2",
                     FileName = "new.fb2",
                     FileSize = 303,
+                    LibId = "lib-new",
                     ContentHash = "new-book-hash",
                     CreatedAt = timestamp,
                     UpdatedAt = timestamp.AddMinutes(3)

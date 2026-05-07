@@ -14,6 +14,7 @@ public sealed class ImportedBookMetadataSnapshot
     public string EntryPath { get; init; } = string.Empty;
     public string? FileName { get; init; }
     public long? FileSize { get; init; }
+    public string? LibId { get; init; }
     public string? ContentHash { get; init; }
     public byte[]? CoverThumbnail { get; init; }
 }

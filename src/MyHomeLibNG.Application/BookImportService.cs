@@ -15,17 +15,20 @@ public sealed class BookImportService
     private readonly IZipArchiveScanner _zipArchiveScanner;
     private readonly IFb2MetadataParser _fb2MetadataParser;
     private readonly ILibraryRepository _libraryRepository;
+    private readonly IInpxLibraryIndexReader? _inpxLibraryIndexReader;
     private readonly int _archiveWorkerCount;
 
     public BookImportService(
         IZipArchiveScanner zipArchiveScanner,
         IFb2MetadataParser fb2MetadataParser,
         ILibraryRepository libraryRepository,
-        int? archiveWorkerCount = null)
+        int? archiveWorkerCount = null,
+        IInpxLibraryIndexReader? inpxLibraryIndexReader = null)
     {
         _zipArchiveScanner = zipArchiveScanner;
         _fb2MetadataParser = fb2MetadataParser;
         _libraryRepository = libraryRepository;
+        _inpxLibraryIndexReader = inpxLibraryIndexReader;
         _archiveWorkerCount = archiveWorkerCount ?? Math.Clamp(Environment.ProcessorCount / 2, 2, 6);
     }
 
@@ -43,6 +46,12 @@ public sealed class BookImportService
         }
 
         var scanPath = ResolveScanPath(profile, inputPath);
+        var inpxSummary = await TryImportFromInpxAsync(profile, inputPath, scanPath, progress, cancellationToken);
+        if (inpxSummary is not null)
+        {
+            return inpxSummary;
+        }
+
         var archivePaths = _zipArchiveScanner
             .ResolveArchivePaths(scanPath)
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -312,6 +321,92 @@ public sealed class BookImportService
         };
     }
 
+    private async Task<BookImportSummary?> TryImportFromInpxAsync(
+        LibraryProfile profile,
+        string? inputPath,
+        string scanPath,
+        IProgress<BookImportProgressUpdate>? progress,
+        CancellationToken cancellationToken)
+    {
+        if (_inpxLibraryIndexReader is null || !ShouldUseInpxPrimary(profile, inputPath))
+        {
+            return null;
+        }
+
+        var inpxPath = profile.FolderSource!.InpxFilePath;
+        ReportProgress(progress, inpxPath, 0, 0, 0, 0, 0, 0, "Reading INPX catalog...", isImportant: true);
+
+        var records = await _inpxLibraryIndexReader.ReadImportRecordsAsync(profile, cancellationToken);
+        if (records.Count == 0)
+        {
+            ReportProgress(progress, inpxPath, 0, 0, 0, 0, 0, 0, "INPX catalog had no importable records. Falling back to ZIP/FB2 scan.", isImportant: true);
+            return null;
+        }
+
+        var failures = new List<BookImportFailure>();
+        var booksAdded = 0;
+        var booksUpdated = 0;
+        var booksSkipped = 0;
+        const int inpxBatchSize = BatchSize;
+
+        for (var offset = 0; offset < records.Count; offset += inpxBatchSize)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var count = Math.Min(inpxBatchSize, records.Count - offset);
+            var batch = new BookImportRecord[count];
+            for (var index = 0; index < count; index++)
+            {
+                batch[index] = records[offset + index];
+            }
+            var batchResult = await WriteBatchWithFallbackAsync(batch, failures, cancellationToken);
+            booksAdded += batchResult.BooksAdded;
+            booksUpdated += batchResult.BooksUpdated;
+            booksSkipped += batchResult.BooksSkipped;
+
+            ReportProgress(
+                progress,
+                inpxPath,
+                0,
+                records.Count,
+                booksAdded,
+                booksUpdated,
+                booksSkipped,
+                failures.Count,
+                $"Indexed {Math.Min(offset + count, records.Count)} of {records.Count} INPX records.");
+        }
+
+        var importedCount = booksAdded + booksUpdated;
+        ReportProgress(
+            progress,
+            inpxPath,
+            0,
+            records.Count,
+            booksAdded,
+            booksUpdated,
+            booksSkipped,
+            failures.Count,
+            $"Completed INPX index import: {importedCount} imported, {booksSkipped} skipped, {failures.Count} errors.",
+            isImportant: true,
+            isCompleted: true);
+
+        return new BookImportSummary
+        {
+            ScanPath = scanPath,
+            ArchivesScanned = records
+                .Select(record => record.ArchivePath)
+                .Where(path => !string.IsNullOrWhiteSpace(path))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Count(),
+            EntriesDiscovered = records.Count,
+            BooksAdded = booksAdded,
+            BooksUpdated = booksUpdated,
+            BooksSkipped = booksSkipped,
+            ImportedCount = importedCount,
+            Failures = failures
+        };
+    }
+
     private async Task<BookImportRecord> BuildImportRecordAsync(
         long libraryProfileId,
         ZipArchiveBookEntry entry,
@@ -360,6 +455,17 @@ public sealed class BookImportService
         }
 
         throw new InvalidOperationException("Folder library profiles require an archive directory path to import books.");
+    }
+
+    private static bool ShouldUseInpxPrimary(LibraryProfile profile, string? inputPath)
+    {
+        if (profile.LibraryType != LibraryType.Folder || string.IsNullOrWhiteSpace(profile.FolderSource?.InpxFilePath))
+        {
+            return false;
+        }
+
+        return string.IsNullOrWhiteSpace(inputPath) ||
+               !inputPath.Trim().EndsWith(".zip", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string? JoinValues(IReadOnlyList<string> values)

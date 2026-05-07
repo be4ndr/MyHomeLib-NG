@@ -38,7 +38,8 @@ public sealed class ExampleDatasetImportValidationTests
             new ZipArchiveScanner(new OfflineLibraryFileSystem()),
             new Fb2MetadataParser(),
             repository,
-            archiveWorkerCount: 3);
+            archiveWorkerCount: 3,
+            inpxLibraryIndexReader: new InpxLibraryIndexReader(new InpxCatalogParser(), new OfflineLibraryFileSystem()));
 
         var profile = new LibraryProfile
         {
@@ -54,7 +55,7 @@ public sealed class ExampleDatasetImportValidationTests
             CreatedAtUtc = DateTimeOffset.UtcNow
         };
 
-        var summary = await service.ImportLibraryAsync(profile, smallestArchive.FullName);
+        var summary = await service.ImportLibraryAsync(profile);
         var indexedCount = await repository.GetImportedBookCountAsync(profile.Id);
         Assert.True(summary.ImportedCount > 0);
         Assert.Equal(summary.ImportedCount, indexedCount);
@@ -74,6 +75,14 @@ public sealed class ExampleDatasetImportValidationTests
         {
             authorResults = await repository.SearchImportedBooksAsync(profile.Id, authorToken);
             Assert.NotEmpty(authorResults);
+        }
+
+        var genreToken = FirstToken(sample.Genres);
+        IReadOnlyList<ImportedBookMetadataSnapshot>? genreResults = null;
+        if (!string.IsNullOrWhiteSpace(genreToken))
+        {
+            genreResults = await repository.SearchImportedBooksAsync(profile.Id, genreToken);
+            Assert.NotEmpty(genreResults);
         }
 
         var provider = new OfflineBookProvider(
@@ -99,6 +108,12 @@ public sealed class ExampleDatasetImportValidationTests
         {
             Console.WriteLine($"Search example (author): {authorToken}");
             Console.WriteLine($"Search result count (author): {authorResults.Count}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(genreToken) && genreResults is not null)
+        {
+            Console.WriteLine($"Search example (genre): {genreToken}");
+            Console.WriteLine($"Search result count (genre): {genreResults.Count}");
         }
     }
 
