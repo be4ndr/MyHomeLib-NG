@@ -2,6 +2,7 @@ using Microsoft.Data.Sqlite;
 using MyHomeLibNG.Core.Enums;
 using MyHomeLibNG.Core.Interfaces;
 using MyHomeLibNG.Core.Models;
+using MyHomeLibNG.Infrastructure.Data;
 using System.Globalization;
 using System.Text;
 
@@ -10,6 +11,7 @@ namespace MyHomeLibNG.Infrastructure.Repositories;
 public sealed class SqliteLibraryRepository : ILibraryRepository
 {
     private static readonly DateTimeStyles TimestampStyles = DateTimeStyles.RoundtripKind;
+    private const int SearchTextBackfillBatchSize = 1000;
     private const string SelectProfileColumns = """
                                                 SELECT Id, Name, ProviderId, LibraryType, ConnectionInfo, ApiBaseUrl, SearchEndpoint, InpxFilePath, ArchiveDirectoryPath, CreatedAtUtc, LastOpenedAtUtc
                                                 FROM LibraryProfiles
@@ -153,50 +155,68 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
     {
         await using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
-
-        await using var command = connection.CreateCommand();
         var queryTokens = BuildSearchTokens(query);
-        var hasQuery = queryTokens.Length > 0;
-        var whereClause = hasQuery
-            ? string.Join(" AND ", queryTokens.Select((_, index) =>
-                $"(Title LIKE $likeQuery{index} ESCAPE '\\' OR Authors LIKE $likeQuery{index} ESCAPE '\\' OR Series LIKE $likeQuery{index} ESCAPE '\\' OR Genres LIKE $likeQuery{index} ESCAPE '\\' OR Annotation LIKE $likeQuery{index} ESCAPE '\\' OR Language LIKE $likeQuery{index} ESCAPE '\\' OR FileName LIKE $likeQuery{index} ESCAPE '\\' OR EntryPath LIKE $likeQuery{index} ESCAPE '\\' OR ArchivePath LIKE $likeQuery{index} ESCAPE '\\' OR LibId LIKE $likeQuery{index} ESCAPE '\\')"))
-            : "1=1";
-
-        command.CommandText = $"""
-                              SELECT Title,
-                                     Authors,
-                                     Annotation,
-                                     PublishYear,
-                                     Series,
-                                     SeriesNumber,
-                                     Genres,
-                                     Language,
-                                     ArchivePath,
-                                     EntryPath,
-                                     FileName,
-                                     FileSize,
-                                     LibId,
-                                     ContentHash,
-                                     CoverThumbnail
-                              FROM Books
-                              WHERE LibraryProfileId = $libraryProfileId
-                                AND {whereClause}
-                              ORDER BY Title COLLATE NOCASE, Authors COLLATE NOCASE, EntryPath COLLATE NOCASE;
-                              """;
-        command.Parameters.AddWithValue("$libraryProfileId", libraryProfileId);
-        for (var index = 0; index < queryTokens.Length; index++)
+        if (queryTokens.Length == 0)
         {
-            command.Parameters.AddWithValue($"$likeQuery{index}", BuildLikePattern(queryTokens[index]));
+            return await SearchAllImportedBooksAsync(connection, libraryProfileId, cancellationToken);
         }
 
-        var results = new List<ImportedBookMetadataSnapshot>();
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        while (await reader.ReadAsync(cancellationToken))
+        await BackfillSearchTextBatchAsync(connection, libraryProfileId, SearchTextBackfillBatchSize, cancellationToken);
+
+        var normalizedMatches = await SearchNormalizedRowsAsync(connection, libraryProfileId, queryTokens, cancellationToken);
+        var legacyMatches = await SearchLegacyRowsAsync(connection, libraryProfileId, queryTokens, cancellationToken);
+
+        if (legacyMatches.Count == 0)
         {
-            results.Add(ReadImportedBook(reader));
+            return normalizedMatches;
         }
 
-        return results;
+        var combined = new List<ImportedBookMetadataSnapshot>(normalizedMatches.Count + legacyMatches.Count);
+        combined.AddRange(normalizedMatches);
+        combined.AddRange(legacyMatches);
+        combined.Sort(ImportedBookSearchOrderComparer.Instance);
+        return combined;
+    }
+
+    /// <summary>
+    /// Backfills missing <c>SearchText</c> values in bounded batches.
+    /// </summary>
+    /// <param name="libraryProfileId">Optional library profile scope. When null, all profiles are processed.</param>
+    /// <param name="batchSize">Maximum rows to process per batch.</param>
+    /// <param name="maxBatches">Maximum number of batches to process in this call.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Total rows updated.</returns>
+    public async Task<int> BackfillSearchTextAsync(
+        long? libraryProfileId = null,
+        int batchSize = SearchTextBackfillBatchSize,
+        int maxBatches = 1,
+        CancellationToken cancellationToken = default)
+    {
+        if (batchSize <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(batchSize), batchSize, "Batch size must be greater than zero.");
+        }
+
+        if (maxBatches <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(maxBatches), maxBatches, "Max batches must be greater than zero.");
+        }
+
+        await using var connection = new SqliteConnection(_connectionString);
+        await connection.OpenAsync(cancellationToken);
+
+        var totalUpdated = 0;
+        for (var batch = 0; batch < maxBatches; batch++)
+        {
+            var updated = await BackfillSearchTextBatchAsync(connection, libraryProfileId, batchSize, cancellationToken);
+            totalUpdated += updated;
+            if (updated < batchSize)
+            {
+                break;
+            }
+        }
+
+        return totalUpdated;
     }
 
     public async Task<long> UpsertImportedBookAsync(BookImportRecord book, CancellationToken cancellationToken = default)
@@ -353,6 +373,235 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
         return result;
     }
 
+    private static async Task<int> BackfillSearchTextBatchAsync(
+        SqliteConnection connection,
+        long? libraryProfileId,
+        int batchSize,
+        CancellationToken cancellationToken)
+    {
+        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken);
+
+        await using var selectCommand = connection.CreateCommand();
+        selectCommand.Transaction = transaction;
+        selectCommand.CommandText = libraryProfileId.HasValue
+            ? """
+              SELECT Id,
+                     Title,
+                     Authors,
+                     Series,
+                     Genres,
+                     Annotation,
+                     Language,
+                     FileName
+              FROM Books
+              WHERE LibraryProfileId = $libraryProfileId
+                AND (SearchText IS NULL OR SearchText = '')
+              ORDER BY Id
+              LIMIT $batchSize;
+              """
+            : """
+              SELECT Id,
+                     Title,
+                     Authors,
+                     Series,
+                     Genres,
+                     Annotation,
+                     Language,
+                     FileName
+              FROM Books
+              WHERE SearchText IS NULL OR SearchText = ''
+              ORDER BY Id
+              LIMIT $batchSize;
+              """;
+        selectCommand.Parameters.AddWithValue("$batchSize", batchSize);
+        if (libraryProfileId.HasValue)
+        {
+            selectCommand.Parameters.AddWithValue("$libraryProfileId", libraryProfileId.Value);
+        }
+
+        var updates = new List<(long Id, string SearchText)>(batchSize);
+        await using var reader = await selectCommand.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            updates.Add((
+                reader.GetInt64(0),
+                BookSearchTextNormalizer.BuildSearchText(
+                    reader.GetString(1),
+                    GetNullableString(reader, 2),
+                    GetNullableString(reader, 3),
+                    GetNullableString(reader, 4),
+                    GetNullableString(reader, 5),
+                    GetNullableString(reader, 6),
+                    GetNullableString(reader, 7))));
+        }
+
+        if (updates.Count == 0)
+        {
+            await transaction.CommitAsync(cancellationToken);
+            return 0;
+        }
+
+        await using var updateCommand = connection.CreateCommand();
+        updateCommand.Transaction = transaction;
+        updateCommand.CommandText = """
+                                    UPDATE Books
+                                    SET SearchText = $searchText
+                                    WHERE Id = $id
+                                      AND (SearchText IS NULL OR SearchText = '');
+                                    """;
+        updateCommand.Parameters.AddWithValue("$searchText", string.Empty);
+        updateCommand.Parameters.AddWithValue("$id", 0L);
+
+        var updatedCount = 0;
+        foreach (var update in updates)
+        {
+            updateCommand.Parameters["$searchText"].Value = update.SearchText;
+            updateCommand.Parameters["$id"].Value = update.Id;
+            updatedCount += await updateCommand.ExecuteNonQueryAsync(cancellationToken);
+        }
+
+        await transaction.CommitAsync(cancellationToken);
+        return updatedCount;
+    }
+
+    private static async Task<IReadOnlyList<ImportedBookMetadataSnapshot>> SearchAllImportedBooksAsync(
+        SqliteConnection connection,
+        long libraryProfileId,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+                              SELECT Title,
+                                     Authors,
+                                     Annotation,
+                                     PublishYear,
+                                     Series,
+                                     SeriesNumber,
+                                     Genres,
+                                     Language,
+                                     ArchivePath,
+                                     EntryPath,
+                                     FileName,
+                                     FileSize,
+                                     LibId,
+                                     ContentHash,
+                                     CoverThumbnail
+                              FROM Books
+                              WHERE LibraryProfileId = $libraryProfileId
+                              ORDER BY Title COLLATE NOCASE, Authors COLLATE NOCASE, EntryPath COLLATE NOCASE;
+                              """;
+        command.Parameters.AddWithValue("$libraryProfileId", libraryProfileId);
+
+        var results = new List<ImportedBookMetadataSnapshot>();
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            results.Add(ReadImportedBook(reader));
+        }
+
+        return results;
+    }
+
+    private static async Task<List<ImportedBookMetadataSnapshot>> SearchNormalizedRowsAsync(
+        SqliteConnection connection,
+        long libraryProfileId,
+        string[] queryTokens,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        var whereClause = string.Join(" AND ", queryTokens.Select((_, index) =>
+            $"SearchText LIKE $likeQuery{index} ESCAPE '\\'"));
+
+        command.CommandText = $"""
+                              SELECT Title,
+                                     Authors,
+                                     Annotation,
+                                     PublishYear,
+                                     Series,
+                                     SeriesNumber,
+                                     Genres,
+                                     Language,
+                                     ArchivePath,
+                                     EntryPath,
+                                     FileName,
+                                     FileSize,
+                                     LibId,
+                                     ContentHash,
+                                     CoverThumbnail
+                              FROM Books
+                              WHERE LibraryProfileId = $libraryProfileId
+                                AND SearchText IS NOT NULL
+                                AND SearchText <> ''
+                                AND {whereClause}
+                              ORDER BY Title COLLATE NOCASE, Authors COLLATE NOCASE, EntryPath COLLATE NOCASE;
+                              """;
+        command.Parameters.AddWithValue("$libraryProfileId", libraryProfileId);
+        for (var index = 0; index < queryTokens.Length; index++)
+        {
+            command.Parameters.AddWithValue($"$likeQuery{index}", BuildLikePattern(queryTokens[index]));
+        }
+
+        var results = new List<ImportedBookMetadataSnapshot>();
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            results.Add(ReadImportedBook(reader));
+        }
+
+        return results;
+    }
+
+    private static async Task<List<ImportedBookMetadataSnapshot>> SearchLegacyRowsAsync(
+        SqliteConnection connection,
+        long libraryProfileId,
+        string[] queryTokens,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+                              SELECT Title,
+                                     Authors,
+                                     Annotation,
+                                     PublishYear,
+                                     Series,
+                                     SeriesNumber,
+                                     Genres,
+                                     Language,
+                                     ArchivePath,
+                                     EntryPath,
+                                     FileName,
+                                     FileSize,
+                                     LibId,
+                                     ContentHash
+                              FROM Books
+                              WHERE LibraryProfileId = $libraryProfileId
+                                AND (SearchText IS NULL OR SearchText = '');
+                              """;
+        command.Parameters.AddWithValue("$libraryProfileId", libraryProfileId);
+
+        var results = new List<ImportedBookMetadataSnapshot>();
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            var book = ReadImportedBookWithoutThumbnail(reader);
+            var searchText = BookSearchTextNormalizer.BuildSearchText(
+                book.Title,
+                book.Authors,
+                book.Series,
+                book.Genres,
+                book.Annotation,
+                book.Language,
+                book.FileName);
+            if (queryTokens.All(token => searchText.Contains(token, StringComparison.Ordinal)))
+            {
+                results.Add(book);
+            }
+        }
+
+        results.Sort(ImportedBookSearchOrderComparer.Instance);
+        return results;
+    }
+
     public async Task DeleteAsync(long libraryId, CancellationToken cancellationToken = default)
     {
         await using var connection = new SqliteConnection(_connectionString);
@@ -416,6 +665,28 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
         };
     }
 
+    private static ImportedBookMetadataSnapshot ReadImportedBookWithoutThumbnail(SqliteDataReader reader)
+    {
+        return new ImportedBookMetadataSnapshot
+        {
+            Title = reader.GetString(0),
+            Authors = GetNullableString(reader, 1),
+            Annotation = GetNullableString(reader, 2),
+            PublishYear = reader.IsDBNull(3) ? null : reader.GetInt32(3),
+            Series = GetNullableString(reader, 4),
+            SeriesNumber = reader.IsDBNull(5) ? null : reader.GetInt32(5),
+            Genres = GetNullableString(reader, 6),
+            Language = GetNullableString(reader, 7),
+            ArchivePath = reader.GetString(8),
+            EntryPath = reader.GetString(9),
+            FileName = GetNullableString(reader, 10),
+            FileSize = reader.IsDBNull(11) ? null : reader.GetInt64(11),
+            LibId = GetNullableString(reader, 12),
+            ContentHash = GetNullableString(reader, 13),
+            CoverThumbnail = null
+        };
+    }
+
     private static SqliteCommand CreateImportedBookSelectByLocationCommand(SqliteConnection connection)
     {
         var command = connection.CreateCommand();
@@ -468,6 +739,7 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
                                   FileSize,
                                   LibId,
                                   ContentHash,
+                                  SearchText,
                                   CoverThumbnail,
                                   CreatedAt,
                                   UpdatedAt)
@@ -488,6 +760,7 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
                                   $fileSize,
                                   $libId,
                                   $contentHash,
+                                  $searchText,
                                   $coverThumbnail,
                                   $createdAt,
                                   $updatedAt)
@@ -505,6 +778,7 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
                                   FileSize = excluded.FileSize,
                                   LibId = excluded.LibId,
                                   ContentHash = excluded.ContentHash,
+                                  SearchText = excluded.SearchText,
                                   CoverThumbnail = excluded.CoverThumbnail,
                                   UpdatedAt = excluded.UpdatedAt;
                               """;
@@ -524,6 +798,7 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
         command.Parameters.AddWithValue("$fileSize", DBNull.Value);
         command.Parameters.AddWithValue("$libId", DBNull.Value);
         command.Parameters.AddWithValue("$contentHash", DBNull.Value);
+        command.Parameters.AddWithValue("$searchText", string.Empty);
         command.Parameters.AddWithValue("$coverThumbnail", DBNull.Value);
         command.Parameters.AddWithValue("$createdAt", string.Empty);
         command.Parameters.AddWithValue("$updatedAt", string.Empty);
@@ -548,6 +823,14 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
         command.Parameters["$fileSize"].Value = book.FileSize ?? (object)DBNull.Value;
         command.Parameters["$libId"].Value = book.LibId ?? (object)DBNull.Value;
         command.Parameters["$contentHash"].Value = book.ContentHash ?? (object)DBNull.Value;
+        command.Parameters["$searchText"].Value = BookSearchTextNormalizer.BuildSearchText(
+            book.Title,
+            book.Authors,
+            book.Series,
+            book.Genres,
+            book.Annotation,
+            book.Language,
+            book.FileName);
         command.Parameters["$coverThumbnail"].Value = book.CoverThumbnail ?? (object)DBNull.Value;
         command.Parameters["$createdAt"].Value = book.CreatedAt.ToString("O");
         command.Parameters["$updatedAt"].Value = book.UpdatedAt.ToString("O");
@@ -575,11 +858,12 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
 
     private static string[] BuildSearchTokens(string query)
     {
-        return string.IsNullOrWhiteSpace(query)
+        var normalizedQuery = BookSearchTextNormalizer.NormalizeForSearch(query);
+        return string.IsNullOrWhiteSpace(normalizedQuery)
             ? []
-            : query
+            : normalizedQuery
                 .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Distinct(StringComparer.Ordinal)
                 .ToArray();
     }
 
@@ -668,6 +952,43 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
 
     private static DateTimeOffset? ParseNullableTimestamp(string? value)
         => value is null ? null : DateTimeOffset.Parse(value, CultureInfo.InvariantCulture, TimestampStyles);
+
+    private sealed class ImportedBookSearchOrderComparer : IComparer<ImportedBookMetadataSnapshot>
+    {
+        public static readonly ImportedBookSearchOrderComparer Instance = new();
+
+        public int Compare(ImportedBookMetadataSnapshot? x, ImportedBookMetadataSnapshot? y)
+        {
+            if (ReferenceEquals(x, y))
+            {
+                return 0;
+            }
+
+            if (x is null)
+            {
+                return -1;
+            }
+
+            if (y is null)
+            {
+                return 1;
+            }
+
+            var byTitle = string.Compare(x.Title, y.Title, StringComparison.OrdinalIgnoreCase);
+            if (byTitle != 0)
+            {
+                return byTitle;
+            }
+
+            var byAuthors = string.Compare(x.Authors ?? string.Empty, y.Authors ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+            if (byAuthors != 0)
+            {
+                return byAuthors;
+            }
+
+            return string.Compare(x.EntryPath, y.EntryPath, StringComparison.OrdinalIgnoreCase);
+        }
+    }
 
     private sealed record ProfileRecord(
         long Id,

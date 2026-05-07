@@ -148,6 +148,7 @@ public sealed class SqliteLibraryRepositoryTests
             Assert.Contains("FileSize", columns);
             Assert.Contains("LibId", columns);
             Assert.Contains("ContentHash", columns);
+            Assert.Contains("SearchText", columns);
             Assert.Contains("CoverThumbnail", columns);
             Assert.Contains("CreatedAt", columns);
             Assert.Contains("UpdatedAt", columns);
@@ -452,6 +453,70 @@ public sealed class SqliteLibraryRepositoryTests
     }
 
     [Fact]
+    public async Task SearchImportedBooksAsync_MatchesCyrillicTokensCaseInsensitively()
+    {
+        var database = await CreateDatabaseAsync();
+
+        try
+        {
+            var repository = new SqliteLibraryRepository(database.ConnectionString);
+            await repository.UpsertImportedBooksAsync(
+            [
+                new BookImportRecord
+                {
+                    LibraryProfileId = 89,
+                    Title = "Ночной дозор",
+                    Authors = "Сергей Лукьяненко;Иванов Петр",
+                    Annotation = "Детективная фантастика",
+                    PrimaryFormat = FileFormat.Fb2,
+                    Series = "Дозоры",
+                    Genres = "фантастика;детектив",
+                    Language = "ru",
+                    ArchivePath = @"X:\mock-library\archives\search-ru.zip",
+                    EntryPath = "books/night-watch.fb2",
+                    FileName = "night-watch.fb2",
+                    FileSize = 123,
+                    ContentHash = "hash-ru",
+                    CreatedAt = DateTimeOffset.UtcNow,
+                    UpdatedAt = DateTimeOffset.UtcNow
+                }
+            ]);
+
+            Assert.Single(await repository.SearchImportedBooksAsync(89, "лукьяненко"));
+            Assert.Single(await repository.SearchImportedBooksAsync(89, "Лукьяненко"));
+            Assert.Single(await repository.SearchImportedBooksAsync(89, "иванов"));
+            Assert.Single(await repository.SearchImportedBooksAsync(89, "Иванов"));
+            Assert.Single(await repository.SearchImportedBooksAsync(89, "детектив"));
+            Assert.Single(await repository.SearchImportedBooksAsync(89, "фантастика"));
+        }
+        finally
+        {
+            database.Dispose();
+        }
+    }
+
+    [Fact]
+    public async Task InitializeAsync_DoesNotBackfillSearchTextSynchronously()
+    {
+        var database = await CreateLegacyBooksDatabaseAsync(legacyRows: 3);
+
+        try
+        {
+            var initializer = new SqliteSchemaInitializer(database.ConnectionString);
+            await initializer.InitializeAsync();
+
+            var pendingCount = await ExecuteScalarAsync<long>(
+                database.ConnectionString,
+                "SELECT COUNT(*) FROM Books WHERE SearchText IS NULL OR SearchText = '';");
+            Assert.Equal(3L, pendingCount);
+        }
+        finally
+        {
+            database.Dispose();
+        }
+    }
+
+    [Fact]
     public async Task ResolveAsync_ReturnsOnlineApiStructure()
     {
         var resolver = new LibrarySourceResolver(CreateOnlineEnvironment());
@@ -491,6 +556,202 @@ public sealed class SqliteLibraryRepositoryTests
         var connectionString = $"Data Source={dbPath};Pooling=False";
         var initializer = new SqliteSchemaInitializer(connectionString);
         await initializer.InitializeAsync();
+        return new TestDatabase(dbPath, connectionString);
+    }
+
+    [Fact]
+    public async Task BackfillSearchTextAsync_ProcessesLimitedBatches()
+    {
+        var database = await CreateLegacyBooksDatabaseAsync(legacyRows: 1200);
+
+        try
+        {
+            var initializer = new SqliteSchemaInitializer(database.ConnectionString);
+            await initializer.InitializeAsync();
+
+            var repository = new SqliteLibraryRepository(database.ConnectionString);
+            var updatedFirstBatch = await repository.BackfillSearchTextAsync(
+                libraryProfileId: 701,
+                batchSize: 500,
+                maxBatches: 1);
+
+            Assert.Equal(500, updatedFirstBatch);
+            Assert.Equal(700L, await ExecuteScalarAsync<long>(
+                database.ConnectionString,
+                "SELECT COUNT(*) FROM Books WHERE SearchText IS NULL OR SearchText = '';"));
+
+            var updatedRemaining = await repository.BackfillSearchTextAsync(
+                libraryProfileId: 701,
+                batchSize: 500,
+                maxBatches: 10);
+
+            Assert.Equal(700, updatedRemaining);
+            Assert.Equal(0L, await ExecuteScalarAsync<long>(
+                database.ConnectionString,
+                "SELECT COUNT(*) FROM Books WHERE SearchText IS NULL OR SearchText = '';"));
+
+            var updatedAfterCompletion = await repository.BackfillSearchTextAsync(
+                libraryProfileId: 701,
+                batchSize: 500,
+                maxBatches: 1);
+            Assert.Equal(0, updatedAfterCompletion);
+        }
+        finally
+        {
+            database.Dispose();
+        }
+    }
+
+    [Fact]
+    public async Task SearchImportedBooksAsync_FindsLegacyRowsBeforeManualBackfill()
+    {
+        var database = await CreateLegacyBooksDatabaseAsync(legacyRows: 1200);
+
+        try
+        {
+            var initializer = new SqliteSchemaInitializer(database.ConnectionString);
+            await initializer.InitializeAsync();
+
+            var repository = new SqliteLibraryRepository(database.ConnectionString);
+            var lowerMatches = await repository.SearchImportedBooksAsync(701, "лукьяненко");
+            var remainingAfterFirstSearch = await ExecuteScalarAsync<long>(
+                database.ConnectionString,
+                "SELECT COUNT(*) FROM Books WHERE SearchText IS NULL OR SearchText = '';");
+
+            Assert.Equal(2, lowerMatches.Count);
+            Assert.Equal(200L, remainingAfterFirstSearch);
+
+            var upperMatches = await repository.SearchImportedBooksAsync(701, "Лукьяненко");
+            var detectiveMatches = await repository.SearchImportedBooksAsync(701, "детектив");
+            Assert.Equal(2, upperMatches.Count);
+            Assert.Equal(2, detectiveMatches.Count);
+        }
+        finally
+        {
+            database.Dispose();
+        }
+    }
+
+    private static async Task<TestDatabase> CreateLegacyBooksDatabaseAsync(int legacyRows = 1)
+    {
+        var dbPath = Path.Combine(Path.GetTempPath(), $"MyHomeLibNG-legacy-{Guid.NewGuid():N}.db");
+        var connectionString = $"Data Source={dbPath};Pooling=False";
+
+        await using (var connection = new SqliteConnection(connectionString))
+        {
+            await connection.OpenAsync();
+
+            await using (var createProfiles = connection.CreateCommand())
+            {
+                createProfiles.CommandText = """
+                                             CREATE TABLE LibraryProfiles (
+                                                 Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                                 Name TEXT NOT NULL,
+                                                 ProviderId TEXT NOT NULL DEFAULT '',
+                                                 LibraryType INTEGER NOT NULL,
+                                                 ConnectionInfo TEXT NOT NULL,
+                                                 CreatedAtUtc TEXT NOT NULL
+                                             );
+                                             """;
+                await createProfiles.ExecuteNonQueryAsync();
+            }
+
+            await using (var createBooks = connection.CreateCommand())
+            {
+                createBooks.CommandText = """
+                                          CREATE TABLE Books (
+                                              Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                              LibraryProfileId INTEGER NOT NULL,
+                                              Title TEXT NOT NULL,
+                                              Authors TEXT NULL,
+                                              Annotation TEXT NULL,
+                                              PublishYear INTEGER NULL,
+                                              PrimaryFormat INTEGER NOT NULL,
+                                              Series TEXT NULL,
+                                              SeriesNumber INTEGER NULL,
+                                              Genres TEXT NULL,
+                                              Language TEXT NULL,
+                                              ArchivePath TEXT NOT NULL,
+                                              EntryPath TEXT NOT NULL,
+                                              FileName TEXT NULL,
+                                              FileSize INTEGER NULL,
+                                              LibId TEXT NULL,
+                                              ContentHash TEXT NULL,
+                                              CoverThumbnail BLOB NULL,
+                                              CreatedAt TEXT NOT NULL,
+                                              UpdatedAt TEXT NOT NULL
+                                          );
+                                          """;
+                await createBooks.ExecuteNonQueryAsync();
+            }
+
+            await using (var insertBook = connection.CreateCommand())
+            {
+                insertBook.CommandText = """
+                                         INSERT INTO Books(
+                                             LibraryProfileId,
+                                             Title,
+                                             Authors,
+                                             Annotation,
+                                             PrimaryFormat,
+                                             Series,
+                                             Genres,
+                                             Language,
+                                             ArchivePath,
+                                             EntryPath,
+                                             FileName,
+                                             CreatedAt,
+                                             UpdatedAt)
+                                         VALUES (
+                                             $libraryProfileId,
+                                             $title,
+                                             $authors,
+                                             $annotation,
+                                             $primaryFormat,
+                                             $series,
+                                             $genres,
+                                             $language,
+                                             $archivePath,
+                                             $entryPath,
+                                             $fileName,
+                                             $createdAt,
+                                             $updatedAt);
+                                         """;
+                insertBook.Parameters.AddWithValue("$libraryProfileId", 701);
+                insertBook.Parameters.AddWithValue("$title", string.Empty);
+                insertBook.Parameters.AddWithValue("$authors", string.Empty);
+                insertBook.Parameters.AddWithValue("$annotation", string.Empty);
+                insertBook.Parameters.AddWithValue("$primaryFormat", (int)FileFormat.Fb2);
+                insertBook.Parameters.AddWithValue("$series", string.Empty);
+                insertBook.Parameters.AddWithValue("$genres", string.Empty);
+                insertBook.Parameters.AddWithValue("$language", "ru");
+                insertBook.Parameters.AddWithValue("$archivePath", string.Empty);
+                insertBook.Parameters.AddWithValue("$entryPath", string.Empty);
+                insertBook.Parameters.AddWithValue("$fileName", string.Empty);
+                insertBook.Parameters.AddWithValue("$createdAt", DateTimeOffset.UtcNow.ToString("O"));
+                insertBook.Parameters.AddWithValue("$updatedAt", DateTimeOffset.UtcNow.ToString("O"));
+
+                for (var index = 0; index < legacyRows; index++)
+                {
+                    insertBook.Parameters["$title"].Value = $"Ночной дозор {index}";
+                    insertBook.Parameters["$authors"].Value = index == 0 || index == legacyRows - 1
+                        ? "Сергей Лукьяненко;Иванов Петр"
+                        : $"Автор {index}";
+                    insertBook.Parameters["$annotation"].Value = index == 0 || index == legacyRows - 1
+                        ? "Городской детектив"
+                        : "Обычная аннотация";
+                    insertBook.Parameters["$series"].Value = "Дозоры";
+                    insertBook.Parameters["$genres"].Value = index == 0 || index == legacyRows - 1
+                        ? "Фантастика"
+                        : "Роман";
+                    insertBook.Parameters["$archivePath"].Value = $@"X:\mock-library\archives\legacy-{index}.zip";
+                    insertBook.Parameters["$entryPath"].Value = $"books/night-watch-{index}.fb2";
+                    insertBook.Parameters["$fileName"].Value = $"night-watch-{index}.fb2";
+                    await insertBook.ExecuteNonQueryAsync();
+                }
+            }
+        }
+
         return new TestDatabase(dbPath, connectionString);
     }
 
