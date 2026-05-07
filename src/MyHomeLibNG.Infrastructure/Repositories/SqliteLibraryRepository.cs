@@ -3,6 +3,7 @@ using MyHomeLibNG.Core.Enums;
 using MyHomeLibNG.Core.Interfaces;
 using MyHomeLibNG.Core.Models;
 using System.Globalization;
+using System.Text;
 
 namespace MyHomeLibNG.Infrastructure.Repositories;
 
@@ -158,7 +159,7 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
         var hasQuery = queryTokens.Length > 0;
         var whereClause = hasQuery
             ? string.Join(" AND ", queryTokens.Select((_, index) =>
-                $"(Title LIKE $likeQuery{index} ESCAPE '\\' OR Authors LIKE $likeQuery{index} ESCAPE '\\' OR Series LIKE $likeQuery{index} ESCAPE '\\' OR Genres LIKE $likeQuery{index} ESCAPE '\\' OR Annotation LIKE $likeQuery{index} ESCAPE '\\' OR Language LIKE $likeQuery{index} ESCAPE '\\')"))
+                $"(Title LIKE $likeQuery{index} ESCAPE '\\' OR Authors LIKE $likeQuery{index} ESCAPE '\\' OR Series LIKE $likeQuery{index} ESCAPE '\\' OR Genres LIKE $likeQuery{index} ESCAPE '\\' OR Annotation LIKE $likeQuery{index} ESCAPE '\\' OR Language LIKE $likeQuery{index} ESCAPE '\\' OR FileName LIKE $likeQuery{index} ESCAPE '\\' OR EntryPath LIKE $likeQuery{index} ESCAPE '\\' OR ArchivePath LIKE $likeQuery{index} ESCAPE '\\')"))
             : "1=1";
 
         command.CommandText = $"""
@@ -244,19 +245,7 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
         await using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
         await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken);
-
-        await using var existingHashCommand = connection.CreateCommand();
-        existingHashCommand.Transaction = transaction;
-        existingHashCommand.CommandText = """
-                                          SELECT ContentHash
-                                          FROM Books
-                                          WHERE LibraryProfileId = $libraryProfileId
-                                            AND ArchivePath = $archivePath
-                                            AND EntryPath = $entryPath;
-                                          """;
-        existingHashCommand.Parameters.AddWithValue("$libraryProfileId", 0L);
-        existingHashCommand.Parameters.AddWithValue("$archivePath", string.Empty);
-        existingHashCommand.Parameters.AddWithValue("$entryPath", string.Empty);
+        var existingHashes = await LoadExistingHashesAsync(connection, transaction, books, cancellationToken);
 
         await using var upsertCommand = CreateUpsertCommand(connection, transaction);
 
@@ -268,12 +257,8 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            existingHashCommand.Parameters["$libraryProfileId"].Value = book.LibraryProfileId;
-            existingHashCommand.Parameters["$archivePath"].Value = book.ArchivePath;
-            existingHashCommand.Parameters["$entryPath"].Value = book.EntryPath;
-
-            var existingHashValue = await existingHashCommand.ExecuteScalarAsync(cancellationToken);
-            var existingHash = existingHashValue is null or DBNull ? null : Convert.ToString(existingHashValue, CultureInfo.InvariantCulture);
+            var key = (book.LibraryProfileId, book.ArchivePath, book.EntryPath);
+            existingHashes.TryGetValue(key, out var existingHash);
 
             if (string.Equals(existingHash, book.ContentHash, StringComparison.OrdinalIgnoreCase))
             {
@@ -292,6 +277,8 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
             {
                 booksUpdated++;
             }
+
+            existingHashes[key] = book.ContentHash;
         }
 
         await transaction.CommitAsync(cancellationToken);
@@ -301,6 +288,68 @@ public sealed class SqliteLibraryRepository : ILibraryRepository
             BooksUpdated = booksUpdated,
             BooksSkipped = booksSkipped
         };
+    }
+
+    private static async Task<Dictionary<(long LibraryProfileId, string ArchivePath, string EntryPath), string?>> LoadExistingHashesAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        IReadOnlyList<BookImportRecord> books,
+        CancellationToken cancellationToken)
+    {
+        var result = new Dictionary<(long LibraryProfileId, string ArchivePath, string EntryPath), string?>();
+
+        var commandText = new StringBuilder(
+            """
+            WITH Requested(LibraryProfileId, ArchivePath, EntryPath) AS (
+                VALUES
+            """);
+
+        for (var index = 0; index < books.Count; index++)
+        {
+            if (index > 0)
+            {
+                commandText.AppendLine(",");
+            }
+
+            commandText.Append($"    ($libraryProfileId{index}, $archivePath{index}, $entryPath{index})");
+        }
+
+        commandText.AppendLine();
+        commandText.Append(
+            """
+            )
+            SELECT b.LibraryProfileId,
+                   b.ArchivePath,
+                   b.EntryPath,
+                   b.ContentHash
+            FROM Books b
+            INNER JOIN Requested r
+                ON b.LibraryProfileId = r.LibraryProfileId
+               AND b.ArchivePath = r.ArchivePath
+               AND b.EntryPath = r.EntryPath;
+            """);
+
+        await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = commandText.ToString();
+
+        for (var index = 0; index < books.Count; index++)
+        {
+            var book = books[index];
+            command.Parameters.AddWithValue($"$libraryProfileId{index}", book.LibraryProfileId);
+            command.Parameters.AddWithValue($"$archivePath{index}", book.ArchivePath);
+            command.Parameters.AddWithValue($"$entryPath{index}", book.EntryPath);
+        }
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            var key = (reader.GetInt64(0), reader.GetString(1), reader.GetString(2));
+            var hash = reader.IsDBNull(3) ? null : reader.GetString(3);
+            result[key] = hash;
+        }
+
+        return result;
     }
 
     public async Task DeleteAsync(long libraryId, CancellationToken cancellationToken = default)
