@@ -25,14 +25,89 @@ public sealed class ZipArchiveScanner : IZipArchiveScanner
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            await foreach (var entry in ScanArchiveAsync(archivePath, cancellationToken))
+            await foreach (var entry in ScanArchiveEntriesReopeningAsync(archivePath, cancellationToken))
             {
                 yield return entry;
             }
         }
     }
 
-    private async IAsyncEnumerable<ZipArchiveBookEntry> ScanArchiveAsync(
+    /// <summary>
+    /// Opens one ZIP archive and executes <paramref name="onEntry"/> for each FB2 entry.
+    /// </summary>
+    public async Task ScanArchiveAsync(
+        string archivePath,
+        Func<ZipArchiveBookEntry, CancellationToken, ValueTask> onEntry,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(archivePath);
+        ArgumentNullException.ThrowIfNull(onEntry);
+
+        await using var archiveStream = await _fileSystem.OpenReadAsync(archivePath, cancellationToken);
+
+        ZipArchive archive;
+        try
+        {
+            archive = new ZipArchive(archiveStream, ZipArchiveMode.Read, leaveOpen: true);
+        }
+        catch (InvalidDataException)
+        {
+            return;
+        }
+
+        using (archive)
+        {
+            foreach (var entry in archive.Entries)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (!IsFb2Entry(entry))
+                {
+                    continue;
+                }
+
+                var archiveEntry = entry;
+                var scanEntry = new ZipArchiveBookEntry
+                {
+                    ArchivePath = archivePath,
+                    EntryPath = archiveEntry.FullName,
+                    FileName = archiveEntry.Name,
+                    FileSize = archiveEntry.Length,
+                    OpenReadAsync = token =>
+                    {
+                        token.ThrowIfCancellationRequested();
+                        return Task.FromResult<Stream>(archiveEntry.Open());
+                    }
+                };
+
+                await onEntry(scanEntry, cancellationToken);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Resolves ZIP archive paths from a ZIP file path or a root folder path.
+    /// </summary>
+    public IReadOnlyList<string> ResolveArchivePaths(string path)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+
+        if (_fileSystem.FileExists(path))
+        {
+            if (!path.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+            {
+                return Array.Empty<string>();
+            }
+
+            return [path];
+        }
+
+        return _fileSystem
+            .EnumerateFilesRecursive(path)
+            .Where(candidate => candidate.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+    }
+
+    private async IAsyncEnumerable<ZipArchiveBookEntry> ScanArchiveEntriesReopeningAsync(
         string archivePath,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
@@ -53,8 +128,7 @@ public sealed class ZipArchiveScanner : IZipArchiveScanner
             foreach (var entry in archive.Entries)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (string.IsNullOrWhiteSpace(entry.Name) ||
-                    !entry.FullName.EndsWith(".fb2", StringComparison.OrdinalIgnoreCase))
+                if (!IsFb2Entry(entry))
                 {
                     continue;
                 }
@@ -71,26 +145,9 @@ public sealed class ZipArchiveScanner : IZipArchiveScanner
         }
     }
 
-    private IEnumerable<string> ResolveArchivePaths(string path)
-    {
-        if (_fileSystem.FileExists(path))
-        {
-            if (path.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
-            {
-                yield return path;
-            }
-
-            yield break;
-        }
-
-        foreach (var candidate in _fileSystem.EnumerateFilesRecursive(path))
-        {
-            if (candidate.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
-            {
-                yield return candidate;
-            }
-        }
-    }
+    private static bool IsFb2Entry(ZipArchiveEntry entry)
+        => !string.IsNullOrWhiteSpace(entry.Name) &&
+           entry.FullName.EndsWith(".fb2", StringComparison.OrdinalIgnoreCase);
 
     private async Task<Stream> OpenEntryStreamAsync(
         string archivePath,

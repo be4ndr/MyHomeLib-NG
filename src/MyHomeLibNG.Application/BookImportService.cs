@@ -8,7 +8,6 @@ namespace MyHomeLibNG.Application;
 
 public sealed class BookImportService
 {
-    private const int EntryChannelCapacity = 24;
     private const int ParsedChannelCapacity = 24;
     private const int BatchSize = 250;
     private static readonly Fb2ParsingOptions ImportParsingOptions = Fb2ParsingOptions.FastImport;
@@ -16,18 +15,18 @@ public sealed class BookImportService
     private readonly IZipArchiveScanner _zipArchiveScanner;
     private readonly IFb2MetadataParser _fb2MetadataParser;
     private readonly ILibraryRepository _libraryRepository;
-    private readonly int _parserWorkerCount;
+    private readonly int _archiveWorkerCount;
 
     public BookImportService(
         IZipArchiveScanner zipArchiveScanner,
         IFb2MetadataParser fb2MetadataParser,
         ILibraryRepository libraryRepository,
-        int? parserWorkerCount = null)
+        int? archiveWorkerCount = null)
     {
         _zipArchiveScanner = zipArchiveScanner;
         _fb2MetadataParser = fb2MetadataParser;
         _libraryRepository = libraryRepository;
-        _parserWorkerCount = parserWorkerCount ?? Math.Clamp(Environment.ProcessorCount / 2, 2, 4);
+        _archiveWorkerCount = archiveWorkerCount ?? Math.Clamp(Environment.ProcessorCount / 2, 2, 6);
     }
 
     public async Task<BookImportSummary> ImportLibraryAsync(
@@ -44,8 +43,11 @@ public sealed class BookImportService
         }
 
         var scanPath = ResolveScanPath(profile, inputPath);
+        var archivePaths = _zipArchiveScanner
+            .ResolveArchivePaths(scanPath)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
         var failures = new List<BookImportFailure>();
-        var archivePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var sync = new object();
         var entriesDiscovered = 0;
         var booksAdded = 0;
@@ -56,93 +58,12 @@ public sealed class BookImportService
         var archivesProcessed = 0;
         string? currentArchive = null;
 
-        var entryChannel = Channel.CreateBounded<ZipArchiveBookEntry>(new BoundedChannelOptions(EntryChannelCapacity)
-        {
-            SingleWriter = true,
-            SingleReader = false,
-            FullMode = BoundedChannelFullMode.Wait
-        });
         var parsedChannel = Channel.CreateBounded<ParsedBookResult>(new BoundedChannelOptions(ParsedChannelCapacity)
         {
             SingleWriter = false,
             SingleReader = true,
             FullMode = BoundedChannelFullMode.Wait
         });
-
-        var producerTask = Task.Run(async () =>
-        {
-            try
-            {
-                await foreach (var entry in _zipArchiveScanner.ScanAsync(scanPath, cancellationToken))
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    bool archiveChanged;
-                    lock (sync)
-                    {
-                        archiveChanged = !string.Equals(currentArchive, entry.ArchivePath, StringComparison.OrdinalIgnoreCase);
-                        if (archiveChanged)
-                        {
-                            if (currentArchive is not null)
-                            {
-                                archivesProcessed++;
-                            }
-
-                            currentArchive = entry.ArchivePath;
-                            archivePaths.Add(entry.ArchivePath);
-                        }
-
-                        entriesDiscovered++;
-                    }
-
-                    if (archiveChanged)
-                    {
-                        ReportProgress(progress, currentArchive, SnapshotArchivesProcessed(), SnapshotEntriesDiscovered(),
-                            SnapshotBooksAdded(), SnapshotBooksUpdated(), SnapshotBooksSkipped(), SnapshotErrorsCount(),
-                            $"Scanning {Path.GetFileName(currentArchive)}", isImportant: true);
-                    }
-
-                    await entryChannel.Writer.WriteAsync(entry, cancellationToken);
-                }
-            }
-            finally
-            {
-                lock (sync)
-                {
-                    if (currentArchive is not null)
-                    {
-                        archivesProcessed = archivePaths.Count;
-                    }
-                }
-
-                entryChannel.Writer.TryComplete();
-            }
-        }, CancellationToken.None);
-
-        var parserTasks = Enumerable.Range(0, _parserWorkerCount)
-            .Select(_ => Task.Run(async () =>
-            {
-                await foreach (var entry in entryChannel.Reader.ReadAllAsync(cancellationToken))
-                {
-                    try
-                    {
-                        var record = await BuildImportRecordAsync(profile.Id, entry, cancellationToken);
-                        await parsedChannel.Writer.WriteAsync(ParsedBookResult.Success(record), cancellationToken);
-                    }
-                    catch (Exception exception) when (exception is not OperationCanceledException)
-                    {
-                        await parsedChannel.Writer.WriteAsync(
-                            ParsedBookResult.Failure(new BookImportFailure
-                            {
-                                ArchivePath = entry.ArchivePath,
-                                EntryPath = entry.EntryPath,
-                                Message = exception.Message
-                            }),
-                            cancellationToken);
-                    }
-                }
-            }, CancellationToken.None))
-            .ToArray();
 
         var writerTask = Task.Run(async () =>
         {
@@ -198,16 +119,72 @@ public sealed class BookImportService
             }
         }, CancellationToken.None);
 
+        var archiveTask = Task.Run(async () =>
+        {
+            var parallelOptions = new ParallelOptions
+            {
+                CancellationToken = cancellationToken,
+                MaxDegreeOfParallelism = _archiveWorkerCount
+            };
+
+            await Parallel.ForEachAsync(archivePaths, parallelOptions, async (archivePath, token) =>
+            {
+                lock (sync)
+                {
+                    currentArchive = archivePath;
+                }
+
+                ReportProgress(progress, archivePath, SnapshotArchivesProcessed(), SnapshotEntriesDiscovered(),
+                    SnapshotBooksAdded(), SnapshotBooksUpdated(), SnapshotBooksSkipped(), SnapshotErrorsCount(),
+                    $"Scanning {Path.GetFileName(archivePath)}", isImportant: true);
+
+                await _zipArchiveScanner.ScanArchiveAsync(
+                    archivePath,
+                    async (entry, callbackToken) =>
+                    {
+                        lock (sync)
+                        {
+                            entriesDiscovered++;
+                        }
+
+                        try
+                        {
+                            var record = await BuildImportRecordAsync(profile.Id, entry, callbackToken);
+                            await parsedChannel.Writer.WriteAsync(ParsedBookResult.Success(record), callbackToken);
+                        }
+                        catch (Exception exception) when (exception is not OperationCanceledException)
+                        {
+                            await parsedChannel.Writer.WriteAsync(
+                                ParsedBookResult.Failure(new BookImportFailure
+                                {
+                                    ArchivePath = entry.ArchivePath,
+                                    EntryPath = entry.EntryPath,
+                                    Message = exception.Message
+                                }),
+                                callbackToken);
+                        }
+                    },
+                    token);
+
+                lock (sync)
+                {
+                    archivesProcessed++;
+                }
+
+                ReportProgress(progress, archivePath, SnapshotArchivesProcessed(), SnapshotEntriesDiscovered(),
+                    SnapshotBooksAdded(), SnapshotBooksUpdated(), SnapshotBooksSkipped(), SnapshotErrorsCount(),
+                    $"Finished {Path.GetFileName(archivePath)}");
+            });
+        }, CancellationToken.None);
+
         try
         {
-            await producerTask;
-            await Task.WhenAll(parserTasks);
+            await archiveTask;
             parsedChannel.Writer.TryComplete();
             await writerTask;
         }
         catch
         {
-            entryChannel.Writer.TryComplete();
             parsedChannel.Writer.TryComplete();
             throw;
         }
@@ -221,7 +198,7 @@ public sealed class BookImportService
         return new BookImportSummary
         {
             ScanPath = scanPath,
-            ArchivesScanned = archivePaths.Count,
+            ArchivesScanned = archivePaths.Length,
             EntriesDiscovered = entriesDiscovered,
             BooksAdded = booksAdded,
             BooksUpdated = booksUpdated,

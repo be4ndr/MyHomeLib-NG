@@ -109,6 +109,12 @@ public sealed class SqliteSchemaInitializer
                                       ON Books (LibraryProfileId, Title);
                                       """;
         await ExecuteNonQueryAsync(connection, searchIndexSql, cancellationToken);
+
+        const string searchSortIndexSql = """
+                                          CREATE INDEX IF NOT EXISTS IX_Books_LibraryProfileId_TitleAuthorsEntryPath
+                                          ON Books (LibraryProfileId, Title COLLATE NOCASE, Authors COLLATE NOCASE, EntryPath COLLATE NOCASE);
+                                          """;
+        await ExecuteNonQueryAsync(connection, searchSortIndexSql, cancellationToken);
     }
 
     private static async Task EnsureColumnAsync(

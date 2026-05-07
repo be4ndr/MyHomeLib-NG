@@ -162,6 +162,21 @@ public sealed class LocalLibraryScanCoordinatorTests
                 await Task.Yield();
             }
         }
+
+        public IReadOnlyList<string> ResolveArchivePaths(string path)
+            => _entries.Select(entry => entry.ArchivePath).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+
+        public async Task ScanArchiveAsync(
+            string archivePath,
+            Func<ZipArchiveBookEntry, CancellationToken, ValueTask> onEntry,
+            CancellationToken cancellationToken = default)
+        {
+            foreach (var entry in _entries.Where(entry => string.Equals(entry.ArchivePath, archivePath, StringComparison.OrdinalIgnoreCase)))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                await onEntry(entry, cancellationToken);
+            }
+        }
     }
 
     private sealed class FakeFb2MetadataParser : IFb2MetadataParser

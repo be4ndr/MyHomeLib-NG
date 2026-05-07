@@ -433,6 +433,7 @@ public sealed class SqliteLibraryRepositoryTests
             Assert.Single(await repository.SearchImportedBooksAsync(88, "Chronicles"));
             Assert.Single(await repository.SearchImportedBooksAsync(88, "fantasy"));
             Assert.Single(await repository.SearchImportedBooksAsync(88, "annotation"));
+            Assert.Single(await repository.SearchImportedBooksAsync(88, "one.fb2"));
         }
         finally
         {
