@@ -26,7 +26,7 @@ jobs:
       - name: Validate OpenAI API key secret
         shell: bash
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.AB_GITHUB_OPENAI }}
         run: |
           if [ -z "$OPENAI_API_KEY" ]; then
             echo "OPENAI_API_KEY secret is missing or unavailable to this workflow."
@@ -38,7 +38,7 @@ jobs:
         id: codex
         uses: openai/codex-action@v1
         with:
-          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          openai-api-key: ${{ secrets.AB_GITHUB_OPENAI }}
           prompt-file: .github/codex/prompts/review.md
           output-file: codex-review.md
           sandbox: read-only
