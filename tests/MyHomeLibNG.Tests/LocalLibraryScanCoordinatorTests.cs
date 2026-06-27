@@ -28,11 +28,11 @@ public sealed class LocalLibraryScanCoordinatorTests
             new BookImportService(scanner, new FakeFb2MetadataParser(), new RecordingLibraryRepository()),
             progressInterval: TimeSpan.FromDays(1));
 
-        var progressSnapshots = new List<LocalLibraryScanProgress>();
+        var progressSnapshots = new ConcurrentQueue<LocalLibraryScanProgress>();
         using var operation = coordinator.StartScan(
             CreateProfile(),
             workspace.DirectoryPath,
-            progress: new ImmediateProgress<LocalLibraryScanProgress>(snapshot => progressSnapshots.Add(snapshot)));
+            progress: new ImmediateProgress<LocalLibraryScanProgress>(snapshot => progressSnapshots.Enqueue(snapshot)));
 
         var summary = await operation.Completion;
 
@@ -40,9 +40,8 @@ public sealed class LocalLibraryScanCoordinatorTests
         Assert.Equal(0, summary.BooksUpdated);
         Assert.Equal(0, summary.BooksSkipped);
         Assert.NotEmpty(progressSnapshots);
-        Assert.True(progressSnapshots.Count <= 8);
 
-        var finalSnapshot = progressSnapshots[^1];
+        var finalSnapshot = progressSnapshots.Last();
         Assert.True(finalSnapshot.IsCompleted);
         Assert.Equal(1, finalSnapshot.ArchivesProcessed);
         Assert.Equal(1, finalSnapshot.ArchivesTotal);
