@@ -1,0 +1,64 @@
+using Avalonia.Controls;
+using Avalonia.Headless.XUnit;
+using Avalonia.Threading;
+using Xunit;
+
+namespace MyHomeLibNG.App.HeadlessTests;
+
+public sealed class AddLibraryWindowHeadlessTests
+{
+    [AvaloniaFact]
+    public void AddLibraryWindow_LoadsWithExpectedDefaultState()
+    {
+        var window = new AddLibraryWindow();
+        try
+        {
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Same(window, window.DataContext);
+            Assert.NotNull(window.FindControl<ComboBox>("ProviderOptionsComboBox"));
+            Assert.NotNull(window.FindControl<TextBox>("LibraryNameTextBox"));
+
+            var offlineFieldsPanel = window.FindControl<StackPanel>("OfflineFieldsPanel");
+            var onlineDetailsPanel = window.FindControl<StackPanel>("OnlineDetailsPanel");
+
+            Assert.NotNull(offlineFieldsPanel);
+            Assert.NotNull(onlineDetailsPanel);
+            Assert.True(offlineFieldsPanel.IsVisible);
+            Assert.False(onlineDetailsPanel.IsVisible);
+        }
+        finally
+        {
+            window.Close();
+            Dispatcher.UIThread.RunJobs();
+        }
+    }
+
+    [AvaloniaFact]
+    public void AddLibraryWindow_ProviderSelectionUpdatesOfflineAndOnlinePanels()
+    {
+        var window = new AddLibraryWindow();
+        try
+        {
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+
+            window.SelectedOption = window.ProviderOptions.First(option => option.IsOnline);
+            Dispatcher.UIThread.RunJobs();
+
+            var offlineFieldsPanel = window.FindControl<StackPanel>("OfflineFieldsPanel");
+            var onlineDetailsPanel = window.FindControl<StackPanel>("OnlineDetailsPanel");
+
+            Assert.NotNull(offlineFieldsPanel);
+            Assert.NotNull(onlineDetailsPanel);
+            Assert.False(offlineFieldsPanel.IsVisible);
+            Assert.True(onlineDetailsPanel.IsVisible);
+        }
+        finally
+        {
+            window.Close();
+            Dispatcher.UIThread.RunJobs();
+        }
+    }
+}

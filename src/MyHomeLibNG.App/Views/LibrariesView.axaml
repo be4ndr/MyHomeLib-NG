@@ -15,7 +15,7 @@
             <TextBlock Text="{Binding ActiveLibraryName}" FontSize="24" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" TextWrapping="Wrap" />
             <TextBlock Text="{Binding ActiveLibrarySourceSummary}" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
           </StackPanel>
-          <StackPanel Spacing="10" IsVisible="{Binding ShowFirstRunState}">
+          <StackPanel x:Name="LibrariesFirstRunState" Spacing="10" IsVisible="{Binding ShowFirstRunState}">
             <TextBlock Text="No libraries yet" FontSize="24" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
             <TextBlock Text="Add a library to begin." Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
             <Button Classes="primary" HorizontalAlignment="Left" Content="Add library" Click="OnAddLibraryClicked" />

@@ -16,7 +16,8 @@
         <TextBlock Text="Choose a library or source." Foreground="#FF5E676B" />
       </StackPanel>
 
-      <Border Grid.Row="1"
+      <Border x:Name="ValidationMessageBorder"
+              Grid.Row="1"
               Margin="0,16,0,0"
               Background="#FFFEF1E2"
               BorderBrush="#FFE4A85F"
@@ -30,13 +31,14 @@
       <StackPanel Grid.Row="2" Margin="0,16,0,0" Spacing="12">
         <StackPanel Spacing="6">
           <TextBlock Text="Preset" FontWeight="SemiBold" Foreground="#FF1F2527" />
-          <ComboBox ItemsSource="{Binding ProviderOptions}"
+          <ComboBox x:Name="ProviderOptionsComboBox"
+                    ItemsSource="{Binding ProviderOptions}"
                     SelectedItem="{Binding SelectedOption}" />
         </StackPanel>
 
         <StackPanel Spacing="6">
           <TextBlock Text="Display name" FontWeight="SemiBold" Foreground="#FF1F2527" />
-          <TextBox Text="{Binding LibraryName}" Watermark="My offline shelf" />
+          <TextBox x:Name="LibraryNameTextBox" Text="{Binding LibraryName}" Watermark="My offline shelf" />
         </StackPanel>
       </StackPanel>
 
@@ -46,11 +48,11 @@
             <TextBlock Text="{Binding SelectedOption.Description}" TextWrapping="Wrap" Foreground="#FF5E676B" />
           </Border>
 
-          <StackPanel Spacing="10" IsVisible="{Binding SelectedOption.IsOffline}">
+          <StackPanel x:Name="OfflineFieldsPanel" Spacing="10" IsVisible="{Binding SelectedOption.IsOffline}">
             <StackPanel Spacing="6">
               <TextBlock Text="INPX file path" FontWeight="SemiBold" Foreground="#FF1F2527" />
               <Grid ColumnDefinitions="*,Auto">
-                <TextBox Text="{Binding InpxFilePath}" Watermark="C:\Books\catalog.inpx" />
+                <TextBox x:Name="InpxFilePathTextBox" Text="{Binding InpxFilePath}" Watermark="C:\Books\catalog.inpx" />
                 <Button Grid.Column="1" Margin="10,0,0,0" Content="Browse..." Click="OnBrowseInpxClicked" />
               </Grid>
             </StackPanel>
@@ -58,13 +60,13 @@
             <StackPanel Spacing="6">
               <TextBlock Text="Archive folder" FontWeight="SemiBold" Foreground="#FF1F2527" />
               <Grid ColumnDefinitions="*,Auto">
-                <TextBox Text="{Binding ArchiveDirectoryPath}" Watermark="C:\Books\Archives" />
+                <TextBox x:Name="ArchiveDirectoryPathTextBox" Text="{Binding ArchiveDirectoryPath}" Watermark="C:\Books\Archives" />
                 <Button Grid.Column="1" Margin="10,0,0,0" Content="Browse..." Click="OnBrowseArchiveClicked" />
               </Grid>
             </StackPanel>
           </StackPanel>
 
-          <StackPanel Spacing="10" IsVisible="{Binding SelectedOption.IsOnline}">
+          <StackPanel x:Name="OnlineDetailsPanel" Spacing="10" IsVisible="{Binding SelectedOption.IsOnline}">
             <Border Background="#FFFFFFFF" BorderBrush="#FFE0D9CC" BorderThickness="1" CornerRadius="16" Padding="14">
               <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto">
                 <TextBlock Text="Base URL" Foreground="#FF5E676B" />
