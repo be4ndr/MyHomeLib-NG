@@ -1,7 +1,7 @@
 ﻿You are reviewing a pull request for MyHomeLib-NG.
 
 Project stack:
-- C# / .NET 8
+- C# / .NET 10
 - Avalonia UI
 - SQLite
 - Modular monolith

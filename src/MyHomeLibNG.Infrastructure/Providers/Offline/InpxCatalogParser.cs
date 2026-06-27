@@ -58,11 +58,16 @@ public sealed class InpxCatalogParser : IInpxCatalogParser
                 using var reader = new StreamReader(entryStream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
                 var inferredContainerPath = Path.ChangeExtension(archiveEntry.Name, ".zip");
 
-                while (!reader.EndOfStream)
+                while (true)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
                     var line = await reader.ReadLineAsync();
+                    if (line is null)
+                    {
+                        break;
+                    }
+
                     if (string.IsNullOrWhiteSpace(line))
                     {
                         continue;

@@ -16,7 +16,7 @@ It is designed for readers, librarians, and collectors who need an offline-first
 
 ## Stack choices
 
-- **C# / .NET 8** for a modern LTS runtime.
+- **C# / .NET 10** for the current LTS runtime.
 - **Avalonia UI** for a native desktop-first, cross-platform UI.
 - **SQLite** for fast local metadata storage in v1.
 - **Modular monolith architecture** to keep v1 simple while allowing future scaling.
