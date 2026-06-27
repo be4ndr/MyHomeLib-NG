@@ -906,17 +906,33 @@ public sealed class SqliteLibraryRepositoryTests
             => ValidUris.Contains(value);
 
         public bool FileExists(string path)
-            => ExistingFiles.ContainsKey(path);
+            => ExistingFiles.Keys.Any(existingPath => ArePathsEqual(existingPath, path));
 
         public long? GetFileSize(string path)
-            => ExistingFiles.TryGetValue(path, out var sizeBytes) ? sizeBytes : null;
+        {
+            foreach (var entry in ExistingFiles)
+            {
+                if (ArePathsEqual(entry.Key, path))
+                {
+                    return entry.Value;
+                }
+            }
+
+            return null;
+        }
 
         public bool DirectoryExists(string path)
-            => ExistingDirectories.Contains(path);
+            => ExistingDirectories.Any(existingPath => ArePathsEqual(existingPath, path));
 
         public IReadOnlyList<string> EnumerateFiles(string directoryPath)
             // The production implementation scans a single directory, so the mock
             // mirrors that contract instead of trying to emulate a real file system.
-            => ExistingFiles.Keys.Where(path => string.Equals(Path.GetDirectoryName(path), directoryPath, StringComparison.OrdinalIgnoreCase)).ToArray();
+            => ExistingFiles.Keys.Where(path => string.Equals(Path.GetDirectoryName(NormalizePath(path)), NormalizePath(directoryPath), StringComparison.OrdinalIgnoreCase)).ToArray();
+
+        private static bool ArePathsEqual(string left, string right)
+            => string.Equals(NormalizePath(left), NormalizePath(right), StringComparison.OrdinalIgnoreCase);
+
+        private static string NormalizePath(string path)
+            => path.Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar);
     }
 }
