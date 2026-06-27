@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using Avalonia.Controls;
+using Avalonia.Markup.Xaml;
 using Avalonia.Platform.Storage;
 using MyHomeLibNG.Core.Constants;
 using MyHomeLibNG.Core.Enums;
@@ -271,6 +272,11 @@ public partial class AddLibraryWindow : Window, INotifyPropertyChanged
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
+
+    private void InitializeComponent()
+    {
+        AvaloniaXamlLoader.Load(this);
     }
 
     public sealed class ProviderOption

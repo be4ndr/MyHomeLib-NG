@@ -3,6 +3,7 @@ using System.Diagnostics;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Markup.Xaml;
 using Microsoft.Extensions.DependencyInjection;
 using MyHomeLibNG.App.ViewModels;
 using MyHomeLibNG.Application;
@@ -260,6 +261,11 @@ public partial class MainWindow : Window
             AppMode.Directory => _directoryView,
             _ => _librariesView
         };
+    }
+
+    private void InitializeComponent()
+    {
+        AvaloniaXamlLoader.Load(this);
     }
 
     private async void OnLibrariesSelectionChanged(object? sender, SelectionChangedEventArgs e)

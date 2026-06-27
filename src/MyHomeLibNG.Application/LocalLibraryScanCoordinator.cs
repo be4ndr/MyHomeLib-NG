@@ -52,7 +52,7 @@ public sealed class LocalLibraryScanCoordinator
             try
             {
                 progressState.SetArchivesTotal(CountArchives(scanPath));
-                var importProgress = new Progress<BookImportProgressUpdate>(progressState.HandleUpdate);
+                var importProgress = new CallbackProgress<BookImportProgressUpdate>(progressState.HandleUpdate);
                 var summary = await _bookImportService.ImportLibraryAsync(
                     profile,
                     inputPath,
@@ -254,6 +254,21 @@ public sealed class LocalLibraryScanCoordinator
             {
                 _recentLogLines.Dequeue();
             }
+        }
+    }
+
+    private sealed class CallbackProgress<T> : IProgress<T>
+    {
+        private readonly Action<T> _handler;
+
+        public CallbackProgress(Action<T> handler)
+        {
+            _handler = handler;
+        }
+
+        public void Report(T value)
+        {
+            _handler(value);
         }
     }
 }
