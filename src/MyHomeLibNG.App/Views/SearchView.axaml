@@ -16,21 +16,22 @@
 
         <Border Grid.Row="1" Background="{StaticResource SurfaceAltBrush}" CornerRadius="18" Padding="18" Margin="0,0,0,18">
           <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="*,*">
-            <TextBox Grid.ColumnSpan="2"
+            <TextBox x:Name="StructuredSearchQueryTextBox"
+                     Grid.ColumnSpan="2"
                      Watermark="Title, author, or ISBN"
                      Text="{Binding SearchQuery}" />
-            <TextBox Grid.Row="1" Margin="0,14,10,0" Watermark="Author" Text="{Binding SearchAuthor}" />
-            <TextBox Grid.Row="1" Grid.Column="1" Margin="10,14,0,0" Watermark="Book title" Text="{Binding SearchTitle}" />
+            <TextBox x:Name="SearchAuthorTextBox" Grid.Row="1" Margin="0,14,10,0" Watermark="Author" Text="{Binding SearchAuthor}" />
+            <TextBox x:Name="SearchTitleTextBox" Grid.Row="1" Grid.Column="1" Margin="10,14,0,0" Watermark="Book title" Text="{Binding SearchTitle}" />
             <Grid Grid.Row="2" Grid.ColumnSpan="2" Margin="0,14,0,0" ColumnDefinitions="*,*,140,140">
-              <TextBox Margin="0,0,10,0" Watermark="Series" Text="{Binding SearchSeries}" />
-              <TextBox Grid.Column="1" Margin="10,0,10,0" Watermark="Genre" Text="{Binding SearchGenre}" />
-              <TextBox Grid.Column="2" Margin="10,0,10,0" Watermark="Year" Text="{Binding SearchYear}" />
-              <TextBox Grid.Column="3" Margin="10,0,0,0" Watermark="Language" Text="{Binding SearchLanguage}" />
+              <TextBox x:Name="SearchSeriesTextBox" Margin="0,0,10,0" Watermark="Series" Text="{Binding SearchSeries}" />
+              <TextBox x:Name="SearchGenreTextBox" Grid.Column="1" Margin="10,0,10,0" Watermark="Genre" Text="{Binding SearchGenre}" />
+              <TextBox x:Name="SearchYearTextBox" Grid.Column="2" Margin="10,0,10,0" Watermark="Year" Text="{Binding SearchYear}" />
+              <TextBox x:Name="SearchLanguageTextBox" Grid.Column="3" Margin="10,0,0,0" Watermark="Language" Text="{Binding SearchLanguage}" />
             </Grid>
             <DockPanel Grid.Row="3" Grid.ColumnSpan="2" Margin="0,16,0,0">
               <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="16">
-                <CheckBox Content="Only local" IsChecked="{Binding SearchOnlyLocal}" />
-                <CheckBox Content="Exact match" IsChecked="{Binding SearchExactMatch}" />
+                <CheckBox x:Name="SearchOnlyLocalCheckBox" Content="Only local" IsChecked="{Binding SearchOnlyLocal}" />
+                <CheckBox x:Name="SearchExactMatchCheckBox" Content="Exact match" IsChecked="{Binding SearchExactMatch}" />
               </StackPanel>
               <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="10">
                 <Button Classes="secondary" Content="Clear" Click="OnClearSearchFiltersClicked" />
@@ -46,7 +47,7 @@
           </Border>
 
           <Grid Grid.Row="1">
-            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="480" Spacing="12" IsVisible="{Binding ShowFirstRunState}">
+            <StackPanel x:Name="SearchFirstRunState" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="480" Spacing="12" IsVisible="{Binding ShowFirstRunState}">
               <Border Width="72" Height="72" CornerRadius="24" Background="{StaticResource AccentSoftBrush}" HorizontalAlignment="Center">
                 <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="L" FontSize="26" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
               </Border>
@@ -55,7 +56,7 @@
               <Button Classes="primary" HorizontalAlignment="Center" Content="Add library" Click="OnAddLibraryClicked" />
             </StackPanel>
 
-            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="520" Spacing="12" IsVisible="{Binding ShowSearchPromptState}">
+            <StackPanel x:Name="SearchPromptState" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="520" Spacing="12" IsVisible="{Binding ShowSearchPromptState}">
               <Border Width="72" Height="72" CornerRadius="24" Background="{StaticResource SurfaceAltBrush}" HorizontalAlignment="Center">
                 <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="S" FontSize="26" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
               </Border>
@@ -63,7 +64,7 @@
               <TextBlock Text="Search the active library." TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource TextMutedBrush}" />
             </StackPanel>
 
-            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="520" Spacing="12" IsVisible="{Binding ShowNoResultsState}">
+            <StackPanel x:Name="SearchNoResultsState" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="520" Spacing="12" IsVisible="{Binding ShowNoResultsState}">
               <Border Width="72" Height="72" CornerRadius="24" Background="{StaticResource SurfaceAltBrush}" HorizontalAlignment="Center">
                 <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="0" FontSize="26" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
               </Border>
