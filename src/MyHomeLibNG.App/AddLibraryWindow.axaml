@@ -97,7 +97,13 @@
           <StackPanel x:Name="OnlineDetailsPanel" Spacing="10" IsVisible="{Binding IsOnlineSourceSelected}">
             <StackPanel Spacing="6">
               <TextBlock Text="URL" FontWeight="SemiBold" Foreground="#FF1F2527" />
-              <TextBox x:Name="OnlineSourceUrlTextBox" Text="{Binding OnlineSourceUrl}" Watermark="https://openlibrary.org" />
+              <TextBox x:Name="OnlineSourceUrlTextBox"
+                       Text="{Binding OnlineSourceUrl, Mode=OneWay}"
+                       IsReadOnly="True"
+                       Watermark="https://openlibrary.org" />
+              <TextBlock Text="URL is defined by the selected provider preset."
+                         Foreground="#FF5E676B"
+                         TextWrapping="Wrap" />
             </StackPanel>
             <Border Background="#FFFFFFFF" BorderBrush="#FFE0D9CC" BorderThickness="1" CornerRadius="16" Padding="14">
               <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto">
