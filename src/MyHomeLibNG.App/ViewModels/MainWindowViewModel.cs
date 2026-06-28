@@ -311,6 +311,7 @@ public sealed class MainWindowViewModel : ObservableObject
                 OnPropertyChanged(nameof(ShowSearchPromptState));
                 OnPropertyChanged(nameof(ShowNoResultsState));
                 OnPropertyChanged(nameof(ShowFirstRunState));
+                OnPropertyChanged(nameof(ShowNoActiveLibraryState));
             }
         }
     }
@@ -357,6 +358,7 @@ public sealed class MainWindowViewModel : ObservableObject
     public bool ShowWarningSourceStatus => HasSelectedLibrary && _activeLibraryHasSourceIssues;
     public bool ShowDetailsPlaceholderState => !HasSelectedBook;
     public bool ShowFirstRunState => !HasLibraries && !IsBusy;
+    public bool ShowNoActiveLibraryState => HasLibraries && !HasSelectedLibrary && !IsBusy;
     public bool ShowSearchPromptState => HasLibraries && HasSelectedLibrary && !_hasPerformedSearch && !IsBusy;
     public bool ShowNoResultsState => HasLibraries && HasSelectedLibrary && _hasPerformedSearch && !HasResults && !IsBusy;
     public bool HasDirectoryEntries => DirectoryEntries.Count > 0;
@@ -862,6 +864,7 @@ public sealed class MainWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(ShowWarningSourceStatus));
         OnPropertyChanged(nameof(ShowDetailsPlaceholderState));
         OnPropertyChanged(nameof(ShowFirstRunState));
+        OnPropertyChanged(nameof(ShowNoActiveLibraryState));
         OnPropertyChanged(nameof(ShowSearchPromptState));
         OnPropertyChanged(nameof(ShowNoResultsState));
         OnPropertyChanged(nameof(HasDirectoryEntries));

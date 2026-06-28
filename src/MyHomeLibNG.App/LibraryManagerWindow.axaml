@@ -1,0 +1,105 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:MyHomeLibNG.App.ViewModels"
+        x:Class="MyHomeLibNG.App.LibraryManagerWindow"
+        Width="760"
+        Height="560"
+        MinWidth="680"
+        MinHeight="500"
+        Title="Library Manager"
+        WindowStartupLocation="CenterOwner"
+        Background="#FFF4F1EA">
+  <Border Background="#FFFBF9F4" BorderBrush="#FFE0D9CC" BorderThickness="1" CornerRadius="22" Padding="22">
+    <Grid RowDefinitions="Auto,*,Auto">
+      <DockPanel Grid.Row="0" Margin="0,0,0,18">
+        <StackPanel DockPanel.Dock="Left" Spacing="4">
+          <TextBlock Text="Library Manager" FontSize="24" FontWeight="SemiBold" Foreground="#FF1F2527" />
+          <TextBlock Text="Select, refresh, add, or remove configured libraries." Foreground="#FF5E676B" />
+        </StackPanel>
+        <Button DockPanel.Dock="Right"
+                Background="#FF2B6A69"
+                Foreground="White"
+                BorderBrush="#FF2B6A69"
+                CornerRadius="12"
+                Padding="16,10"
+                Content="Add library"
+                Click="OnAddLibraryClicked"
+                IsEnabled="{Binding CanTriggerActions}" />
+      </DockPanel>
+
+      <Grid Grid.Row="1" ColumnDefinitions="*,220">
+        <Grid>
+          <StackPanel x:Name="LibrariesManagerEmptyState"
+                      HorizontalAlignment="Center"
+                      VerticalAlignment="Center"
+                      MaxWidth="360"
+                      Spacing="10"
+                      IsVisible="{Binding ShowEmptyState}">
+            <TextBlock Text="No libraries yet" FontSize="22" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="#FF1F2527" />
+            <TextBlock Text="Add a local INPX library or connect an online source." TextWrapping="Wrap" TextAlignment="Center" Foreground="#FF5E676B" />
+            <Button Background="#FF2B6A69"
+                    Foreground="White"
+                    BorderBrush="#FF2B6A69"
+                    CornerRadius="12"
+                    Padding="16,10"
+                    HorizontalAlignment="Center"
+                    Content="Add library"
+                    Click="OnAddLibraryClicked"
+                    IsEnabled="{Binding CanTriggerActions}" />
+          </StackPanel>
+
+          <ListBox x:Name="LibrariesList"
+                   IsVisible="{Binding HasLibraries}"
+                   ItemsSource="{Binding Libraries}"
+                   SelectedItem="{Binding SelectedLibrary}"
+                   SelectionChanged="OnLibrariesSelectionChanged"
+                   IsEnabled="{Binding CanBrowseLibraries}"
+                   Background="Transparent"
+                   BorderThickness="0">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:LibraryProfileItemViewModel">
+                <Border Background="#FFFFFFFF" BorderBrush="#FFE0D9CC" BorderThickness="1" CornerRadius="14" Padding="14" Margin="0,0,0,10">
+                  <Grid ColumnDefinitions="Auto,*">
+                    <Border Width="40" Height="40" CornerRadius="12" Background="#FFDDEBE8">
+                      <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding AccentGlyph}" FontWeight="Bold" Foreground="#FF2B6A69" />
+                    </Border>
+                    <StackPanel Grid.Column="1" Margin="12,0,0,0" Spacing="4">
+                      <TextBlock Text="{Binding Name}" FontSize="16" FontWeight="SemiBold" Foreground="#FF1F2527" />
+                      <TextBlock Text="{Binding ProviderLabel}" Foreground="#FF1F2527" />
+                      <TextBlock Text="{Binding Summary}" Foreground="#FF5E676B" TextWrapping="Wrap" MaxHeight="36" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </Grid>
+
+        <Border Grid.Column="1" Margin="18,0,0,0" Background="#FFF0ECE3" CornerRadius="16" Padding="16">
+          <StackPanel Spacing="10">
+            <TextBlock Text="Actions" FontSize="16" FontWeight="SemiBold" Foreground="#FF1F2527" />
+            <Button Content="Set active"
+                    Click="OnSetActiveClicked"
+                    IsEnabled="{Binding HasSelectedLibrary}" />
+            <Button Content="Refresh list"
+                    Click="OnRefreshClicked"
+                    IsEnabled="{Binding CanRefresh}" />
+            <Button Content="Refresh local index"
+                    Click="OnScanLocalClicked"
+                    IsEnabled="{Binding CanScanSelectedLibrary}" />
+            <Button Content="Edit"
+                    IsEnabled="False"
+                    ToolTip.Tip="Editing library profiles is not implemented yet." />
+            <Button Content="Remove"
+                    Click="OnDeleteLibraryClicked"
+                    IsEnabled="{Binding HasSelectedLibrary}" />
+          </StackPanel>
+        </Border>
+      </Grid>
+
+      <StackPanel Grid.Row="2" Margin="0,18,0,0" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+        <Button Content="Close" Click="OnCloseClicked" />
+      </StackPanel>
+    </Grid>
+  </Border>
+</Window>

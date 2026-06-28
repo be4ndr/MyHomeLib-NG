@@ -48,6 +48,16 @@ public partial class LibrariesView : UserControl
         await ownerWindow.HandleRefreshClickedAsync();
     }
 
+    private async void OnManageLibrariesClicked(object? sender, RoutedEventArgs e)
+    {
+        if (OwnerWindow is not { } ownerWindow)
+        {
+            return;
+        }
+
+        await ownerWindow.HandleManageLibrariesClickedAsync();
+    }
+
     private void InitializeComponent()
     {
         AvaloniaXamlLoader.Load(this);

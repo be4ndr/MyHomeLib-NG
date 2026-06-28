@@ -13,7 +13,7 @@
     <Grid RowDefinitions="Auto,Auto,Auto,*,Auto">
       <StackPanel Grid.Row="0" Spacing="4">
         <TextBlock Text="Add library" FontSize="24" FontWeight="SemiBold" Foreground="#FF1F2527" />
-        <TextBlock Text="Choose a library or source." Foreground="#FF5E676B" />
+        <TextBlock Text="Choose a source type and enter its connection details." Foreground="#FF5E676B" />
       </StackPanel>
 
       <Border x:Name="ValidationMessageBorder"
@@ -30,10 +30,23 @@
 
       <StackPanel Grid.Row="2" Margin="0,16,0,0" Spacing="12">
         <StackPanel Spacing="6">
+          <TextBlock Text="Source type" FontWeight="SemiBold" Foreground="#FF1F2527" />
+          <StackPanel Orientation="Horizontal" Spacing="18">
+            <RadioButton x:Name="OfflineSourceRadioButton"
+                         Content="Offline library"
+                         IsChecked="{Binding IsOfflineSourceSelected}" />
+            <RadioButton x:Name="OnlineSourceRadioButton"
+                         Content="Online source"
+                         IsChecked="{Binding IsOnlineSourceSelected}" />
+          </StackPanel>
+        </StackPanel>
+
+        <StackPanel Spacing="6">
           <TextBlock Text="Preset" FontWeight="SemiBold" Foreground="#FF1F2527" />
           <ComboBox x:Name="ProviderOptionsComboBox"
-                    ItemsSource="{Binding ProviderOptions}"
-                    SelectedItem="{Binding SelectedOption}" />
+                    ItemsSource="{Binding OnlineProviderOptions}"
+                    SelectedItem="{Binding SelectedOption}"
+                    IsVisible="{Binding IsOnlineSourceSelected}" />
         </StackPanel>
 
         <StackPanel Spacing="6">
@@ -48,7 +61,7 @@
             <TextBlock Text="{Binding SelectedOption.Description}" TextWrapping="Wrap" Foreground="#FF5E676B" />
           </Border>
 
-          <StackPanel x:Name="OfflineFieldsPanel" Spacing="10" IsVisible="{Binding SelectedOption.IsOffline}">
+          <StackPanel x:Name="OfflineFieldsPanel" Spacing="10" IsVisible="{Binding IsOfflineSourceSelected}">
             <StackPanel Spacing="6">
               <TextBlock Text="INPX file path" FontWeight="SemiBold" Foreground="#FF1F2527" />
               <Grid ColumnDefinitions="*,Auto">
@@ -66,7 +79,11 @@
             </StackPanel>
           </StackPanel>
 
-          <StackPanel x:Name="OnlineDetailsPanel" Spacing="10" IsVisible="{Binding SelectedOption.IsOnline}">
+          <StackPanel x:Name="OnlineDetailsPanel" Spacing="10" IsVisible="{Binding IsOnlineSourceSelected}">
+            <StackPanel Spacing="6">
+              <TextBlock Text="URL" FontWeight="SemiBold" Foreground="#FF1F2527" />
+              <TextBox x:Name="OnlineSourceUrlTextBox" Text="{Binding OnlineSourceUrl}" Watermark="https://openlibrary.org" />
+            </StackPanel>
             <Border Background="#FFFFFFFF" BorderBrush="#FFE0D9CC" BorderThickness="1" CornerRadius="16" Padding="14">
               <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto">
                 <TextBlock Text="Base URL" Foreground="#FF5E676B" />

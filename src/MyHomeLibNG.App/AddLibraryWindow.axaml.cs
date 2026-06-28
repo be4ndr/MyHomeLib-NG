@@ -16,6 +16,8 @@ public partial class AddLibraryWindow : Window, INotifyPropertyChanged
     private string _libraryName = string.Empty;
     private string _inpxFilePath = string.Empty;
     private string _archiveDirectoryPath = string.Empty;
+    private string _onlineSourceUrl = string.Empty;
+    private bool _isOfflineSourceSelected = true;
     private string? _validationMessage;
 
     public AddLibraryWindow()
@@ -60,22 +62,52 @@ public partial class AddLibraryWindow : Window, INotifyPropertyChanged
     public new event PropertyChangedEventHandler? PropertyChanged;
 
     public ObservableCollection<ProviderOption> ProviderOptions { get; }
+    public IEnumerable<ProviderOption> OnlineProviderOptions => ProviderOptions.Where(option => option.IsOnline);
 
     public ProviderOption SelectedOption
     {
         get => _selectedOption ?? ProviderOptions[0];
         set
         {
-            if (SetProperty(ref _selectedOption, value))
+            var nextValue = value ?? ProviderOptions[0];
+            var previousLabel = _selectedOption?.Label;
+            if (SetProperty(ref _selectedOption, nextValue))
             {
-                if (string.IsNullOrWhiteSpace(LibraryName))
+                if (string.IsNullOrWhiteSpace(LibraryName) ||
+                    string.Equals(LibraryName, previousLabel, StringComparison.Ordinal))
                 {
-                    LibraryName = value.Label;
+                    LibraryName = nextValue.Label;
+                }
+
+                if (nextValue.IsOnline)
+                {
+                    OnlineSourceUrl = nextValue.ApiBaseUrl;
                 }
 
                 ValidationMessage = null;
             }
         }
+    }
+
+    public bool IsOfflineSourceSelected
+    {
+        get => _isOfflineSourceSelected;
+        set
+        {
+            if (SetProperty(ref _isOfflineSourceSelected, value))
+            {
+                OnPropertyChanged(nameof(IsOnlineSourceSelected));
+                SelectedOption = value
+                    ? ProviderOptions.First(option => option.IsOffline)
+                    : ProviderOptions.First(option => option.IsOnline);
+            }
+        }
+    }
+
+    public bool IsOnlineSourceSelected
+    {
+        get => !IsOfflineSourceSelected;
+        set => IsOfflineSourceSelected = !value;
     }
 
     public string LibraryName
@@ -94,6 +126,12 @@ public partial class AddLibraryWindow : Window, INotifyPropertyChanged
     {
         get => _archiveDirectoryPath;
         set => SetProperty(ref _archiveDirectoryPath, value);
+    }
+
+    public string OnlineSourceUrl
+    {
+        get => _onlineSourceUrl;
+        set => SetProperty(ref _onlineSourceUrl, value);
     }
 
     public string? ValidationMessage
@@ -199,7 +237,7 @@ public partial class AddLibraryWindow : Window, INotifyPropertyChanged
             return false;
         }
 
-        if (SelectedOption.IsOffline)
+        if (IsOfflineSourceSelected)
         {
             if (string.IsNullOrWhiteSpace(InpxFilePath))
             {
@@ -241,6 +279,12 @@ public partial class AddLibraryWindow : Window, INotifyPropertyChanged
             return true;
         }
 
+        if (string.IsNullOrWhiteSpace(OnlineSourceUrl))
+        {
+            ValidationMessage = "Online sources require a URL.";
+            return false;
+        }
+
         profile = new LibraryProfile
         {
             Name = LibraryName.Trim(),
@@ -248,7 +292,7 @@ public partial class AddLibraryWindow : Window, INotifyPropertyChanged
             LibraryType = LibraryType.Online,
             OnlineSource = new OnlineLibrarySourceSettings
             {
-                ApiBaseUrl = SelectedOption.ApiBaseUrl,
+                ApiBaseUrl = OnlineSourceUrl.Trim(),
                 SearchEndpoint = SelectedOption.SearchEndpoint
             },
             CreatedAtUtc = DateTimeOffset.UtcNow

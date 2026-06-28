@@ -55,9 +55,14 @@
                  Text="{Binding DirectoryFilterText}" />
 
         <Grid Grid.Row="3">
-          <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="220" Spacing="12" IsVisible="{Binding ShowFirstRunState}">
-            <TextBlock Text="Select a library to begin." TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource TextMutedBrush}" />
-            <Button Classes="primary" HorizontalAlignment="Center" Content="Add library" Click="OnAddLibraryClicked" />
+          <StackPanel x:Name="BrowseFirstRunState" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="220" Spacing="12" IsVisible="{Binding ShowFirstRunState}">
+            <TextBlock Text="A library is required." FontWeight="SemiBold" TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource TextStrongBrush}" />
+            <TextBlock Text="Add or select a library before browsing." TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource TextMutedBrush}" />
+          </StackPanel>
+
+          <StackPanel x:Name="BrowseNoActiveLibraryState" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="220" Spacing="12" IsVisible="{Binding ShowNoActiveLibraryState}">
+            <TextBlock Text="Select a library." FontWeight="SemiBold" TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource TextStrongBrush}" />
+            <TextBlock Text="Choose an active library before browsing." TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource TextMutedBrush}" />
           </StackPanel>
 
           <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="220" Spacing="12" IsVisible="{Binding ShowDirectoryPromptState}">

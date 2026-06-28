@@ -2,7 +2,6 @@ using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
 using MyHomeLibNG.App.HeadlessTests.TestDoubles;
-using MyHomeLibNG.App.ViewModels;
 using MyHomeLibNG.App.Views;
 using Xunit;
 
@@ -11,7 +10,7 @@ namespace MyHomeLibNG.App.HeadlessTests;
 public sealed class VisibilityStateTests
 {
     [AvaloniaFact]
-    public async Task EmptyWorkspace_ShowsFirstRunStateWithoutCrashing()
+    public async Task EmptyWorkspace_ShowsLauncherEmptyStateWithoutPageHost()
     {
         var viewModel = TestViewModelFactory.CreateEmptyWorkspace();
         await viewModel.InitializeAsync();
@@ -22,8 +21,7 @@ public sealed class VisibilityStateTests
             window.Show();
             Dispatcher.UIThread.RunJobs();
 
-            var librariesView = Assert.IsType<LibrariesView>(window.CurrentView);
-            var firstRunState = librariesView.FindControl<StackPanel>("LibrariesFirstRunState");
+            var firstRunState = window.FindControl<StackPanel>("LauncherEmptyState");
             Assert.NotNull(firstRunState);
             Assert.True(firstRunState.IsVisible);
             Assert.False(viewModel.HasLibraries);
@@ -36,19 +34,20 @@ public sealed class VisibilityStateTests
     }
 
     [AvaloniaFact]
-    public async Task SearchView_ShowsPromptBeforeSearchingAndNoResultsAfterEmptySearch()
+    public async Task SearchWindow_ShowsPromptBeforeSearchingAndNoResultsAfterEmptySearch()
     {
         var viewModel = TestViewModelFactory.CreateWithOnlineLibrary();
         await viewModel.InitializeAsync();
-        viewModel.SetMode(AppMode.Search);
 
-        var window = new MainWindow(viewModel);
+        var owner = new MainWindow(viewModel);
+        var window = new SearchWindow(owner, viewModel, executeOnOpen: false);
         try
         {
-            window.Show();
+            owner.Show();
+            window.Show(owner);
             Dispatcher.UIThread.RunJobs();
 
-            var searchView = Assert.IsType<SearchView>(window.CurrentView);
+            var searchView = Assert.IsType<SearchView>(window.Content);
             var promptState = searchView.FindControl<StackPanel>("SearchPromptState");
             var noResultsState = searchView.FindControl<StackPanel>("SearchNoResultsState");
 
@@ -68,6 +67,7 @@ public sealed class VisibilityStateTests
         finally
         {
             window.Close();
+            owner.Close();
             Dispatcher.UIThread.RunJobs();
         }
     }

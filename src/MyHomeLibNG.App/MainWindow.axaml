@@ -4,10 +4,10 @@
         x:Class="MyHomeLibNG.App.MainWindow"
         x:Name="RootWindow"
         Title="MyHomeLibNG"
-        Width="1380"
-        Height="860"
-        MinWidth="1180"
-        MinHeight="760"
+        Width="920"
+        Height="560"
+        MinWidth="820"
+        MinHeight="500"
         Background="#FFF4F1EA">
   <Window.Resources>
     <SolidColorBrush x:Key="HeaderBrush" Color="#FF18363B" />
@@ -161,8 +161,8 @@
   </Window.Styles>
 
   <Grid RowDefinitions="Auto,*,Auto">
-    <Border Grid.Row="0" Background="{StaticResource HeaderBrush}" Padding="24,20,24,18">
-      <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto,Auto">
+    <Border Grid.Row="0" Background="{StaticResource HeaderBrush}" Padding="24,18">
+      <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto" ColumnSpacing="14">
         <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="14">
           <Border Width="44" Height="44" CornerRadius="14" Background="#26FFFFFF" BorderBrush="#22FFFFFF" BorderThickness="1">
             <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="M" FontSize="18" FontWeight="Bold" Foreground="White" />
@@ -173,7 +173,7 @@
           </StackPanel>
         </StackPanel>
 
-        <Border Grid.Column="1" Margin="16,0,0,0" Background="White" CornerRadius="16" Padding="14,10">
+        <Border Grid.Column="1" Background="White" CornerRadius="16" Padding="14,10">
           <Grid ColumnDefinitions="Auto,*,Auto">
             <Border Width="30" Height="30" CornerRadius="10" Background="{StaticResource AccentSoftBrush}" VerticalAlignment="Center">
               <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="Q" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
@@ -191,131 +191,83 @@
           </Grid>
         </Border>
 
-        <Border Grid.Column="2" Margin="14,0,0,0" Background="#FF325359" CornerRadius="18" Padding="12,8" VerticalAlignment="Center">
-          <StackPanel Spacing="4">
-            <StackPanel Orientation="Horizontal" Spacing="8">
-              <TextBlock Text="Active" Foreground="#B8D4D3" FontSize="11" />
-              <TextBlock Text="{Binding ActiveLibraryName}" Foreground="White" FontWeight="SemiBold" MaxWidth="190" TextTrimming="CharacterEllipsis" />
-            </StackPanel>
-            <TextBlock Text="{Binding ActiveLibrarySourceSummary}" Foreground="#D7E8E8" FontSize="11" MaxWidth="230" TextTrimming="CharacterEllipsis" />
-          </StackPanel>
+        <Border Grid.Column="2" Background="#FF325359" CornerRadius="18" Padding="12,8" VerticalAlignment="Center" MinWidth="250">
+          <Grid RowDefinitions="Auto,Auto">
+            <TextBlock Text="Active library" Foreground="#B8D4D3" FontSize="11" Margin="4,0,0,4" />
+            <ComboBox x:Name="ActiveLibrarySelector"
+                      Grid.Row="1"
+                      ItemsSource="{Binding Libraries}"
+                      SelectedItem="{Binding SelectedLibrary}"
+                      SelectionChanged="OnLibrariesSelectionChanged"
+                      IsEnabled="{Binding CanBrowseLibraries}"
+                      Background="#18FFFFFF"
+                      Foreground="White"
+                      BorderBrush="#33FFFFFF"
+                      MinWidth="226">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:LibraryProfileItemViewModel">
+                  <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+          </Grid>
         </Border>
 
-        <Button Grid.Column="3" Margin="14,0,0,0" Classes="ghost" Content="Add library" Click="OnAddLibraryClicked" IsEnabled="{Binding CanTriggerActions}" />
-        <Button Grid.Column="4" Margin="14,0,0,0" Classes="ghost" Content="Refresh" Click="OnRefreshClicked" IsEnabled="{Binding CanRefresh}" />
-        <Button Grid.Column="5"
-                Margin="14,0,0,0"
-                Classes="ghost"
-                Content="Scan local"
-                Click="OnScanLocalClicked"
-                IsEnabled="{Binding CanScanSelectedLibrary}"
-                IsVisible="{Binding HasSelectedOfflineLibrary}" />
-        <Button Grid.Column="6" Margin="14,0,0,0" Classes="ghost" Content="Settings" Click="OnSettingsClicked" IsEnabled="{Binding CanTriggerActions}" />
+        <Button x:Name="ShellAddLibraryButton" Grid.Column="3" Classes="ghost" Content="Add library" Click="OnAddLibraryClicked" IsEnabled="{Binding CanTriggerActions}" />
+        <Button x:Name="ShellRefreshButton" Grid.Column="4" Classes="ghost" Content="Refresh" Click="OnRefreshClicked" IsEnabled="{Binding CanRefresh}" />
+        <Button x:Name="ShellSettingsButton" Grid.Column="5" Classes="ghost" Content="Settings" Click="OnSettingsClicked" IsEnabled="{Binding CanTriggerActions}" />
       </Grid>
     </Border>
 
-    <Grid Grid.Row="1" Margin="22,18,22,18" ColumnDefinitions="108,280,*">
-      <Border Grid.Column="0" Classes="panel" Padding="14">
-        <Grid RowDefinitions="Auto,*,Auto">
-          <StackPanel Spacing="4">
-            <TextBlock Text="" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
-            <TextBlock Text="" FontSize="13" Foreground="{StaticResource TextMutedBrush}" />
-          </StackPanel>
+    <Grid Grid.Row="1" Margin="22,18" ColumnDefinitions="180,*">
+      <Border Grid.Column="0" Classes="panel" Padding="16">
+        <Grid RowDefinitions="Auto,*">
+          <TextBlock Text="Open" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
 
-          <StackPanel Grid.Row="1" Margin="0,18,0,18" Spacing="10">
-            <ToggleButton Classes="mode-nav" IsChecked="{Binding IsLibrariesMode, Mode=OneWay}" Click="OnLibrariesModeClicked">
-              <TextBlock Text="Libraries" HorizontalAlignment="Center" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
-            </ToggleButton>
-            <ToggleButton Classes="mode-nav" IsChecked="{Binding IsSearchMode, Mode=OneWay}" Click="OnSearchModeClicked">
-              <TextBlock Text="Search" HorizontalAlignment="Center" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
-            </ToggleButton>
-            <ToggleButton Classes="mode-nav" IsChecked="{Binding IsDirectoryMode, Mode=OneWay}" Click="OnDirectoryModeClicked">
-              <TextBlock Text="Browse" HorizontalAlignment="Center" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
-            </ToggleButton>
+          <StackPanel Grid.Row="1" Margin="0,18,0,0" Spacing="10">
+            <Button x:Name="LibrariesLaunchButton" Classes="secondary" Content="Libraries" Click="OnLibrariesModeClicked" />
+            <Button x:Name="SearchLaunchButton" Classes="secondary" Content="Search" Click="OnSearchClicked" IsEnabled="{Binding CanTriggerActions}" />
+            <Button x:Name="BrowseLaunchButton" Classes="secondary" Content="Browse" Click="OnDirectoryModeClicked" IsEnabled="{Binding CanTriggerActions}" />
           </StackPanel>
-
-          <Border Grid.Row="2" Background="{StaticResource SurfaceAltBrush}" CornerRadius="16" Padding="12">
-            <StackPanel Spacing="6">
-              <TextBlock Text="Active" FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
-              <TextBlock Text="{Binding ActiveLibraryName}" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" TextWrapping="Wrap" MaxHeight="40" TextTrimming="CharacterEllipsis" />
-            </StackPanel>
-          </Border>
         </Grid>
       </Border>
 
       <Border Grid.Column="1" Classes="panel" Margin="18,0,0,0">
         <Grid RowDefinitions="Auto,Auto,*,Auto">
-          <StackPanel Grid.Row="0" Spacing="4">
-            <TextBlock Text="Libraries" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
-            <TextBlock Text="{Binding SidebarCaption}" FontSize="13" Foreground="{StaticResource TextMutedBrush}" />
+          <StackPanel Grid.Row="0" Spacing="6">
+            <TextBlock Text="Workspace" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
+            <TextBlock Text="Use the launcher buttons to open library, search, browse, and settings windows." Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
           </StackPanel>
 
-          <Button Grid.Row="1" Margin="0,18,0,18" Classes="primary" Content="Add library" Click="OnAddLibraryClicked" />
+          <Border Grid.Row="1"
+                  Background="{StaticResource WarningBrush}"
+                  BorderBrush="{StaticResource WarningStrokeBrush}"
+                  BorderThickness="1"
+                  CornerRadius="16"
+                  Padding="14"
+                  Margin="0,18,0,0"
+                  IsVisible="{Binding HasError}">
+            <DockPanel>
+              <TextBlock DockPanel.Dock="Left" Text="Status" FontWeight="SemiBold" Foreground="#FF8A5A0B" Margin="0,0,12,0" />
+              <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" Foreground="#FF6F4A12" />
+            </DockPanel>
+          </Border>
 
-          <Grid Grid.Row="2">
-            <StackPanel Spacing="14" IsVisible="{Binding ShowFirstRunState}">
-              <Border Background="{StaticResource SurfaceAltBrush}" CornerRadius="18" Padding="18">
-                <StackPanel Spacing="10">
-                  <TextBlock Text="Select a library to begin" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
-                  <TextBlock Text="Add an offline library or online source." TextWrapping="Wrap" Foreground="{StaticResource TextMutedBrush}" />
-                </StackPanel>
-              </Border>
-              <Border Background="{StaticResource SurfaceStrongBrush}" BorderBrush="{StaticResource StrokeBrush}" BorderThickness="1" CornerRadius="18" Padding="16">
-                <StackPanel Spacing="8">
-                  <TextBlock Text="Offline library" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
-                  <TextBlock Text="Use a local INPX file and archive folder." TextWrapping="Wrap" Foreground="{StaticResource TextMutedBrush}" />
-                </StackPanel>
-              </Border>
-              <Border Background="{StaticResource SurfaceStrongBrush}" BorderBrush="{StaticResource StrokeBrush}" BorderThickness="1" CornerRadius="18" Padding="16">
-                <StackPanel Spacing="8">
-                  <TextBlock Text="Online source" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
-                  <TextBlock Text="Add a preset online source." TextWrapping="Wrap" Foreground="{StaticResource TextMutedBrush}" />
-                </StackPanel>
-              </Border>
+          <Grid Grid.Row="2" Margin="0,18,0,0">
+            <StackPanel x:Name="LauncherEmptyState"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        MaxWidth="420"
+                        Spacing="10"
+                        IsVisible="{Binding ShowFirstRunState}">
+              <TextBlock Text="No libraries yet" FontSize="26" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="{StaticResource TextStrongBrush}" />
+              <TextBlock Text="Add a local INPX library or connect an online source." TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource TextMutedBrush}" />
             </StackPanel>
 
-            <ListBox x:Name="LibrariesList"
-                     IsVisible="{Binding HasLibraries}"
-                     ItemsSource="{Binding Libraries}"
-                     SelectedItem="{Binding SelectedLibrary}"
-                     SelectionChanged="OnLibrariesSelectionChanged"
-                     IsEnabled="{Binding CanBrowseLibraries}"
-                     Background="Transparent"
-                     BorderThickness="0">
-              <ListBox.ItemTemplate>
-                <DataTemplate x:DataType="vm:LibraryProfileItemViewModel">
-                  <Border CornerRadius="18" Padding="16">
-                    <Grid ColumnDefinitions="Auto,*,Auto">
-                      <Border Width="42" Height="42" CornerRadius="14" Background="{StaticResource AccentSoftBrush}">
-                        <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding AccentGlyph}" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
-                      </Border>
-                      <StackPanel Grid.Column="1" Margin="14,0,0,0" Spacing="6">
-                        <DockPanel>
-                          <TextBlock DockPanel.Dock="Left" Text="{Binding Name}" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
-                          <Border DockPanel.Dock="Right" Background="#FFF2E8D7" CornerRadius="999" Padding="10,4">
-                            <TextBlock Text="{Binding TypeLabel}" FontSize="11" Foreground="#FF7A5E20" />
-                          </Border>
-                        </DockPanel>
-                        <TextBlock Text="{Binding ProviderLabel}" Foreground="{StaticResource TextStrongBrush}" />
-                        <TextBlock Text="{Binding Summary}" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" MaxHeight="36" TextTrimming="CharacterEllipsis" />
-                      </StackPanel>
-                      <Button Grid.Column="2"
-                              Margin="14,0,0,0"
-                              Classes="secondary"
-                              VerticalAlignment="Top"
-                              Content="Delete"
-                              Click="OnDeleteLibraryClicked" />
-                    </Grid>
-                  </Border>
-                </DataTemplate>
-              </ListBox.ItemTemplate>
-            </ListBox>
-          </Grid>
-
-          <Border Grid.Row="3" Margin="0,16,0,0" Background="{StaticResource SurfaceAltBrush}" CornerRadius="16" Padding="14">
-            <StackPanel Spacing="10">
-              <TextBlock Text="{Binding ActiveLibraryCaption}" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
-              <TextBlock Text="{Binding ActiveLibraryName}" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
+            <StackPanel HorizontalAlignment="Stretch" VerticalAlignment="Center" Spacing="12" IsVisible="{Binding HasLibraries}">
+              <TextBlock Text="Active library" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource TextMutedBrush}" />
+              <TextBlock Text="{Binding ActiveLibraryName}" FontSize="28" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" TextWrapping="Wrap" />
+              <TextBlock Text="{Binding ActiveLibrarySourceSummary}" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
               <StackPanel Orientation="Horizontal" Spacing="8">
                 <Border Classes="status-pill" IsVisible="{Binding ShowHealthySourceStatus}">
                   <TextBlock Text="{Binding ActiveLibrarySourceStatus}" Foreground="{StaticResource AccentBrush}" FontSize="11" FontWeight="SemiBold" />
@@ -324,37 +276,17 @@
                   <TextBlock Text="{Binding ActiveLibrarySourceStatus}" Foreground="#FF8A5A0B" FontSize="11" FontWeight="SemiBold" />
                 </Border>
               </StackPanel>
-              <TextBlock Text="{Binding ActiveLibrarySourceSummary}" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
             </StackPanel>
+          </Grid>
+
+          <Border Grid.Row="3" Margin="0,18,0,0" Background="{StaticResource SurfaceAltBrush}" BorderBrush="{StaticResource StrokeBrush}" BorderThickness="1" CornerRadius="16" Padding="14">
+            <DockPanel LastChildFill="False">
+              <TextBlock DockPanel.Dock="Left" Text="{Binding StatusMessage}" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" MaxWidth="560" TextTrimming="CharacterEllipsis" />
+              <ProgressBar DockPanel.Dock="Right" Width="140" Height="6" IsIndeterminate="True" IsVisible="{Binding IsBusy}" />
+            </DockPanel>
           </Border>
         </Grid>
       </Border>
-
-      <Grid Grid.Column="2" Margin="18,0,0,0" RowDefinitions="Auto,*,Auto">
-        <Border Grid.Row="0"
-                Background="{StaticResource WarningBrush}"
-                BorderBrush="{StaticResource WarningStrokeBrush}"
-                BorderThickness="1"
-                CornerRadius="16"
-                Padding="14"
-                Margin="0,0,0,14"
-                IsVisible="{Binding HasError}">
-          <DockPanel>
-            <TextBlock DockPanel.Dock="Left" Text="Status" FontWeight="SemiBold" Foreground="#FF8A5A0B" Margin="0,0,12,0" />
-            <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" Foreground="#FF6F4A12" />
-          </DockPanel>
-        </Border>
-
-        <ContentControl Grid.Row="1" Content="{Binding #RootWindow.CurrentView}" />
-
-        <Border Grid.Row="2" Margin="0,14,0,0" Background="{StaticResource SurfaceAltBrush}" BorderBrush="{StaticResource StrokeBrush}" BorderThickness="1" CornerRadius="16" Padding="14">
-          <DockPanel LastChildFill="False">
-            <TextBlock DockPanel.Dock="Left" Text="{Binding StatusMessage}" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" MaxWidth="760" TextTrimming="CharacterEllipsis" />
-            <ProgressBar DockPanel.Dock="Right" Width="140" Height="6" IsIndeterminate="True" IsVisible="{Binding IsBusy}" />
-          </DockPanel>
-        </Border>
-      </Grid>
-
     </Grid>
 
     <Border Grid.Row="2" Height="10" Background="#FFF4F1EA" />

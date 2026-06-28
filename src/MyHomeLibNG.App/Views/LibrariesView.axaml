@@ -2,55 +2,59 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="MyHomeLibNG.App.Views.LibrariesView">
   <Border Classes="panel">
-    <Grid RowDefinitions="Auto,Auto,Auto,*">
-      <StackPanel Spacing="4">
-        <TextBlock Text="Libraries" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
-        <TextBlock Text="" FontSize="13" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
+    <Grid>
+      <StackPanel x:Name="LibrariesFirstRunState"
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Center"
+                  MaxWidth="420"
+                  Spacing="12"
+                  IsVisible="{Binding ShowFirstRunState}">
+        <TextBlock Text="No libraries yet" FontSize="28" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="{StaticResource TextStrongBrush}" />
+        <TextBlock Text="Add a local INPX library or connect an online source." TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource TextMutedBrush}" />
+        <Button x:Name="EmptyStateAddLibraryButton"
+                Classes="primary"
+                HorizontalAlignment="Center"
+                Content="Add library"
+                Click="OnAddLibraryClicked" />
       </StackPanel>
 
-      <Border Grid.Row="1" Margin="0,18,0,18" Background="{StaticResource SurfaceAltBrush}" CornerRadius="18" Padding="18">
-        <Grid>
-          <StackPanel Spacing="10" IsVisible="{Binding HasLibraries}">
-            <TextBlock Text="{Binding LibraryCountSummary}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
-            <TextBlock Text="{Binding ActiveLibraryName}" FontSize="24" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" TextWrapping="Wrap" />
-            <TextBlock Text="{Binding ActiveLibrarySourceSummary}" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
+      <Grid RowDefinitions="Auto,*" IsVisible="{Binding HasLibraries}">
+        <DockPanel Margin="0,0,0,18">
+          <StackPanel DockPanel.Dock="Left" Spacing="4">
+            <TextBlock Text="Libraries" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
+            <TextBlock Text="{Binding LibraryCountSummary}" FontSize="13" Foreground="{StaticResource TextMutedBrush}" />
           </StackPanel>
-          <StackPanel x:Name="LibrariesFirstRunState" Spacing="10" IsVisible="{Binding ShowFirstRunState}">
-            <TextBlock Text="No libraries yet" FontSize="24" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
-            <TextBlock Text="Add a library to begin." Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
-            <Button Classes="primary" HorizontalAlignment="Left" Content="Add library" Click="OnAddLibraryClicked" />
+          <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="10">
+            <Button x:Name="ManageLibrariesButton" Classes="secondary" Content="Manage" Click="OnManageLibrariesClicked" />
+            <Button Classes="primary" Content="Search" Click="OnSearchModeClicked" IsEnabled="{Binding HasSelectedLibrary}" />
+            <Button Classes="secondary" Content="Browse" Click="OnDirectoryModeClicked" IsEnabled="{Binding HasSelectedLibrary}" />
           </StackPanel>
-        </Grid>
-      </Border>
+        </DockPanel>
 
-      <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="12" Margin="0,0,0,18">
-        <Button Classes="primary" Content="Search" Click="OnSearchModeClicked" IsEnabled="{Binding HasSelectedLibrary}" />
-        <Button Classes="secondary" Content="Browse" Click="OnDirectoryModeClicked" IsEnabled="{Binding HasSelectedLibrary}" />
-        <Button Classes="secondary" Content="Refresh" Click="OnRefreshClicked" IsEnabled="{Binding CanRefresh}" />
-      </StackPanel>
-
-      <Grid Grid.Row="3" ColumnDefinitions="*,*">
-        <Border Grid.Column="0" Margin="0,0,9,0" Background="{StaticResource SurfaceStrongBrush}" BorderBrush="{StaticResource StrokeBrush}" BorderThickness="1" CornerRadius="18" Padding="18">
-          <StackPanel Spacing="10">
-            <TextBlock Text="Status" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
-            <StackPanel Orientation="Horizontal" Spacing="8">
-              <Border Classes="status-pill" IsVisible="{Binding ShowHealthySourceStatus}">
-                <TextBlock Text="{Binding ActiveLibrarySourceStatus}" Foreground="{StaticResource AccentBrush}" FontSize="11" FontWeight="SemiBold" />
-              </Border>
-              <Border Classes="status-pill warning" IsVisible="{Binding ShowWarningSourceStatus}">
-                <TextBlock Text="{Binding ActiveLibrarySourceStatus}" Foreground="#FF8A5A0B" FontSize="11" FontWeight="SemiBold" />
-              </Border>
+        <Grid Grid.Row="1" ColumnDefinitions="2*,*">
+          <Border Grid.Column="0" Margin="0,0,9,0" Background="{StaticResource SurfaceAltBrush}" CornerRadius="18" Padding="18">
+            <StackPanel Spacing="10">
+              <TextBlock Text="Active library" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
+              <TextBlock Text="{Binding ActiveLibraryName}" FontSize="24" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" TextWrapping="Wrap" />
+              <TextBlock Text="{Binding ActiveLibrarySourceSummary}" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
             </StackPanel>
-            <TextBlock Text="{Binding ActiveLibrarySourceSummary}" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
-          </StackPanel>
-        </Border>
-        <Border Grid.Column="1" Margin="9,0,0,0" Background="{StaticResource SurfaceStrongBrush}" BorderBrush="{StaticResource StrokeBrush}" BorderThickness="1" CornerRadius="18" Padding="18">
-          <StackPanel Spacing="10">
-            <TextBlock Text="Browse" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
-            <TextBlock Text="Search the active library." Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
-            <TextBlock Text="Browse by author, title, series, or genre." Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
-          </StackPanel>
-        </Border>
+          </Border>
+
+          <Border Grid.Column="1" Margin="9,0,0,0" Background="{StaticResource SurfaceStrongBrush}" BorderBrush="{StaticResource StrokeBrush}" BorderThickness="1" CornerRadius="18" Padding="18">
+            <StackPanel Spacing="10">
+              <TextBlock Text="Source status" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <Border Classes="status-pill" IsVisible="{Binding ShowHealthySourceStatus}">
+                  <TextBlock Text="{Binding ActiveLibrarySourceStatus}" Foreground="{StaticResource AccentBrush}" FontSize="11" FontWeight="SemiBold" />
+                </Border>
+                <Border Classes="status-pill warning" IsVisible="{Binding ShowWarningSourceStatus}">
+                  <TextBlock Text="{Binding ActiveLibrarySourceStatus}" Foreground="#FF8A5A0B" FontSize="11" FontWeight="SemiBold" />
+                </Border>
+              </StackPanel>
+              <TextBlock Text="{Binding ActiveLibrarySourceSummary}" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+        </Grid>
       </Grid>
     </Grid>
   </Border>

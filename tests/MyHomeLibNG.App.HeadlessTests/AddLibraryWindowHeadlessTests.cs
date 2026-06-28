@@ -17,6 +17,8 @@ public sealed class AddLibraryWindowHeadlessTests
             Dispatcher.UIThread.RunJobs();
 
             Assert.Same(window, window.DataContext);
+            Assert.NotNull(window.FindControl<RadioButton>("OfflineSourceRadioButton"));
+            Assert.NotNull(window.FindControl<RadioButton>("OnlineSourceRadioButton"));
             Assert.NotNull(window.FindControl<ComboBox>("ProviderOptionsComboBox"));
             Assert.NotNull(window.FindControl<TextBox>("LibraryNameTextBox"));
 
@@ -44,16 +46,19 @@ public sealed class AddLibraryWindowHeadlessTests
             window.Show();
             Dispatcher.UIThread.RunJobs();
 
-            window.SelectedOption = window.ProviderOptions.First(option => option.IsOnline);
+            window.IsOnlineSourceSelected = true;
             Dispatcher.UIThread.RunJobs();
 
             var offlineFieldsPanel = window.FindControl<StackPanel>("OfflineFieldsPanel");
             var onlineDetailsPanel = window.FindControl<StackPanel>("OnlineDetailsPanel");
+            var onlineSourceUrlTextBox = window.FindControl<TextBox>("OnlineSourceUrlTextBox");
 
             Assert.NotNull(offlineFieldsPanel);
             Assert.NotNull(onlineDetailsPanel);
+            Assert.NotNull(onlineSourceUrlTextBox);
             Assert.False(offlineFieldsPanel.IsVisible);
             Assert.True(onlineDetailsPanel.IsVisible);
+            Assert.False(string.IsNullOrWhiteSpace(window.OnlineSourceUrl));
         }
         finally
         {

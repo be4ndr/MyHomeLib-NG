@@ -1,0 +1,66 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="MyHomeLibNG.App.SettingsWindow"
+        Width="780"
+        Height="600"
+        MinWidth="700"
+        MinHeight="520"
+        Title="Settings"
+        WindowStartupLocation="CenterOwner"
+        Background="#FFF4F1EA">
+  <Border Background="#FFFBF9F4" BorderBrush="#FFE0D9CC" BorderThickness="1" CornerRadius="22" Padding="22">
+    <Grid RowDefinitions="Auto,*,Auto">
+      <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,18">
+        <TextBlock Text="Settings" FontSize="24" FontWeight="SemiBold" Foreground="#FF1F2527" />
+        <TextBlock Text="Application preferences and diagnostics." Foreground="#FF5E676B" />
+      </StackPanel>
+
+      <TabControl Grid.Row="1">
+        <TabItem Header="General">
+          <StackPanel Margin="16" Spacing="10">
+            <TextBlock Text="Startup and language preferences are not configurable yet." Foreground="#FF5E676B" TextWrapping="Wrap" />
+          </StackPanel>
+        </TabItem>
+        <TabItem Header="Appearance">
+          <StackPanel Margin="16" Spacing="10">
+            <TextBlock Text="Theme, density, and font-size preferences are not configurable yet." Foreground="#FF5E676B" TextWrapping="Wrap" />
+          </StackPanel>
+        </TabItem>
+        <TabItem Header="Libraries">
+          <StackPanel Margin="16" Spacing="10">
+            <TextBlock Text="Library import behavior is managed by each configured library." Foreground="#FF5E676B" TextWrapping="Wrap" />
+            <Button Content="Open Library Manager" HorizontalAlignment="Left" Click="OnOpenLibraryManagerClicked" />
+          </StackPanel>
+        </TabItem>
+        <TabItem Header="Search">
+          <StackPanel Margin="16" Spacing="10">
+            <TextBlock Text="Search currently uses regular SQLite indexed fields. Search preferences are not configurable yet." Foreground="#FF5E676B" TextWrapping="Wrap" />
+          </StackPanel>
+        </TabItem>
+        <TabItem Header="Storage">
+          <StackPanel Margin="16" Spacing="10">
+            <TextBlock Text="Database path: MyHomeLibNG.db" Foreground="#FF1F2527" />
+            <TextBlock Text="Cache cleanup and storage diagnostics are not configurable yet." Foreground="#FF5E676B" TextWrapping="Wrap" />
+          </StackPanel>
+        </TabItem>
+        <TabItem Header="Online sources">
+          <StackPanel Margin="16" Spacing="10">
+            <TextBlock Text="Supported presets: Project Gutenberg, Open Library, Google Books." Foreground="#FF1F2527" TextWrapping="Wrap" />
+            <TextBlock Text="Authentication and retry preferences are not supported by the current configuration model." Foreground="#FF5E676B" TextWrapping="Wrap" />
+          </StackPanel>
+        </TabItem>
+        <TabItem Header="About">
+          <StackPanel Margin="16" Spacing="8">
+            <TextBlock Text="{Binding AppName}" FontSize="20" FontWeight="SemiBold" Foreground="#FF1F2527" />
+            <TextBlock Text="{Binding VersionText}" Foreground="#FF5E676B" />
+            <TextBlock Text="Freeware, offline-first desktop library manager." Foreground="#FF5E676B" TextWrapping="Wrap" />
+          </StackPanel>
+        </TabItem>
+      </TabControl>
+
+      <StackPanel Grid.Row="2" Margin="0,18,0,0" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+        <Button Content="Close" Click="OnCloseClicked" />
+      </StackPanel>
+    </Grid>
+  </Border>
+</Window>
