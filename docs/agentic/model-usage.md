@@ -9,6 +9,12 @@ Use the smallest capable model for the job, and reserve stronger reasoning for c
 - UI-capable models: Avalonia XAML changes, binding checks, empty/loading/error states, and headless test planning.
 - Review models: independent checks for regression risk, missing tests, dependency direction, and performance concerns.
 
+## Automated PR Review
+
+`.github/workflows/codex-review.yml` runs the active Codex PR review for same-repository pull requests. It uses the repository secret configured for the OpenAI API key, keeps the Codex sandbox read-only, skips fork PRs, and uploads the review as an artifact.
+
+Treat this review as advisory. It should help humans find architecture, SQLite/import/search, Avalonia/ViewModel, testing, validation, and performance risks, but it is not a required merge gate.
+
 ## Suggested Pairing
 
 - Feature implementation: one coding model to implement, one review model to inspect.
@@ -32,4 +38,3 @@ Use the smallest capable model for the job, and reserve stronger reasoning for c
 - `MainWindowViewModel` changes.
 - Long-running import, parsing, network, or UI operations.
 - Changes that could affect existing user databases or local catalogs.
-

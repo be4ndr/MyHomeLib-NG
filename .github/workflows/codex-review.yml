@@ -6,6 +6,7 @@ on:
 
 jobs:
   codex-review:
+    # Advisory review only. Do not make this a required merge gate without a separate policy change.
     # Fork PRs do not receive repository secrets, so skip Codex review there instead of failing noisily.
     if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest

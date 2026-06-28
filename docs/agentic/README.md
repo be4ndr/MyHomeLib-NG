@@ -41,6 +41,21 @@ This folder describes how AI-assisted contributors should work in MyHomeLib-NG. 
 - Keep import/search paths memory-bounded and cancellation-aware where practical.
 - Keep Avalonia UI responsive and avoid direct SQLite access from UI code.
 
+## Active Codex PR Review Workflow
+
+The repository has an active advisory Codex review workflow at `.github/workflows/codex-review.yml`.
+
+- It runs on pull requests when they are opened, synchronized, or reopened.
+- It is skipped for fork PRs because forked pull requests cannot receive repository secrets.
+- It checks out the pull request merge ref with repository credentials disabled.
+- It validates that the repository OpenAI secret is available before running review.
+- It runs `openai/codex-action@v1` with `.github/codex/prompts/review.md`.
+- It uses `sandbox: read-only`, so review cannot edit files.
+- It uploads `codex-review.md` as an artifact.
+- It is advisory only. This workflow is not currently configured as a required merge gate.
+
+The review prompt should stay aligned with `AGENTS.md` and should focus on architecture boundaries, SQLite/import/search risk, Avalonia/ViewModel binding risk, tests, validation claims, and performance-sensitive paths.
+
 ## Validation
 
 Preferred full validation:
@@ -60,4 +75,3 @@ dotnet test tests/MyHomeLibNG.App.HeadlessTests/MyHomeLibNG.App.HeadlessTests.cs
 ```
 
 Always report what actually ran. If validation is skipped or fails because of environment setup, say so directly.
-
