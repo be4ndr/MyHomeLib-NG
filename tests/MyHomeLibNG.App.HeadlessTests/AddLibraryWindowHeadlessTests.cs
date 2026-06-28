@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
+using MyHomeLibNG.Core.Models;
 using Xunit;
 
 namespace MyHomeLibNG.App.HeadlessTests;
@@ -58,7 +59,46 @@ public sealed class AddLibraryWindowHeadlessTests
             Assert.NotNull(onlineSourceUrlTextBox);
             Assert.False(offlineFieldsPanel.IsVisible);
             Assert.True(onlineDetailsPanel.IsVisible);
+            Assert.True(onlineSourceUrlTextBox.IsReadOnly);
             Assert.False(string.IsNullOrWhiteSpace(window.OnlineSourceUrl));
+        }
+        finally
+        {
+            window.Close();
+            Dispatcher.UIThread.RunJobs();
+        }
+    }
+
+    [AvaloniaFact]
+    public void AddLibraryWindow_SavesSelectedProviderPresetUrlForOnlineSources()
+    {
+        var window = new AddLibraryWindow
+        {
+            IsOnlineSourceSelected = true,
+            LibraryName = "Open Library"
+        };
+
+        try
+        {
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+
+            var selectedOption = Assert.IsType<AddLibraryWindow.ProviderOption>(window.SelectedOption);
+            var urlField = typeof(AddLibraryWindow).GetField("_onlineSourceUrl", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            Assert.NotNull(urlField);
+            urlField.SetValue(window, "https://custom.example.test");
+
+            var tryBuildProfile = typeof(AddLibraryWindow).GetMethod("TryBuildProfile", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            Assert.NotNull(tryBuildProfile);
+
+            var arguments = new object?[] { null };
+            var success = Assert.IsType<bool>(tryBuildProfile.Invoke(window, arguments));
+            Assert.True(success);
+
+            var profile = Assert.IsType<LibraryProfile>(arguments[0]);
+            var onlineSource = Assert.IsType<OnlineLibrarySourceSettings>(profile.OnlineSource);
+            Assert.Equal(selectedOption.ApiBaseUrl, onlineSource.ApiBaseUrl);
+            Assert.Equal(selectedOption.SearchEndpoint, onlineSource.SearchEndpoint);
         }
         finally
         {
