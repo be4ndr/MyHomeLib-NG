@@ -39,6 +39,10 @@
       <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
       <Setter Property="CornerRadius" Value="12" />
       <Setter Property="Padding" Value="16,10" />
+      <Setter Property="MinHeight" Value="42" />
+      <Setter Property="MinWidth" Value="88" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
     <Style Selector="Button.secondary">
       <Setter Property="Background" Value="{StaticResource SurfaceStrongBrush}" />
@@ -46,6 +50,10 @@
       <Setter Property="BorderBrush" Value="{StaticResource StrokeStrongBrush}" />
       <Setter Property="CornerRadius" Value="12" />
       <Setter Property="Padding" Value="16,10" />
+      <Setter Property="MinHeight" Value="42" />
+      <Setter Property="MinWidth" Value="88" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
     <Style Selector="Button.ghost">
       <Setter Property="Background" Value="#14FFFFFF" />
@@ -53,6 +61,21 @@
       <Setter Property="BorderBrush" Value="#22FFFFFF" />
       <Setter Property="CornerRadius" Value="12" />
       <Setter Property="Padding" Value="14,10" />
+      <Setter Property="MinHeight" Value="42" />
+      <Setter Property="MinWidth" Value="88" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.navigation">
+      <Setter Property="Background" Value="{StaticResource SurfaceStrongBrush}" />
+      <Setter Property="Foreground" Value="{StaticResource TextStrongBrush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource StrokeStrongBrush}" />
+      <Setter Property="CornerRadius" Value="12" />
+      <Setter Property="Padding" Value="16,10" />
+      <Setter Property="MinHeight" Value="44" />
+      <Setter Property="MinWidth" Value="116" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
     <Style Selector="ToggleButton.mode-nav">
       <Setter Property="Background" Value="Transparent" />
@@ -76,6 +99,10 @@
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="CornerRadius" Value="12" />
       <Setter Property="Padding" Value="12,8" />
+      <Setter Property="MinHeight" Value="40" />
+      <Setter Property="MinWidth" Value="76" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
     <Style Selector="ToggleButton.directory-tab:checked">
       <Setter Property="Background" Value="{StaticResource AccentSoftBrush}" />
@@ -225,9 +252,9 @@
           <TextBlock Text="Open" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
 
           <StackPanel Grid.Row="1" Margin="0,18,0,0" Spacing="10">
-            <Button x:Name="LibrariesLaunchButton" Classes="secondary" Content="Libraries" Click="OnLibrariesModeClicked" />
-            <Button x:Name="SearchLaunchButton" Classes="secondary" Content="Search" Click="OnSearchClicked" IsEnabled="{Binding CanTriggerActions}" />
-            <Button x:Name="BrowseLaunchButton" Classes="secondary" Content="Browse" Click="OnDirectoryModeClicked" IsEnabled="{Binding CanTriggerActions}" />
+            <Button x:Name="LibrariesLaunchButton" Classes="navigation" Content="Libraries" Click="OnLibrariesModeClicked" />
+            <Button x:Name="SearchLaunchButton" Classes="navigation" Content="Search" Click="OnSearchClicked" IsEnabled="{Binding CanTriggerActions}" />
+            <Button x:Name="BrowseLaunchButton" Classes="navigation" Content="Browse" Click="OnDirectoryModeClicked" IsEnabled="{Binding CanTriggerActions}" />
           </StackPanel>
         </Grid>
       </Border>

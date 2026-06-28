@@ -33,6 +33,10 @@
       <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
       <Setter Property="CornerRadius" Value="12" />
       <Setter Property="Padding" Value="16,10" />
+      <Setter Property="MinHeight" Value="42" />
+      <Setter Property="MinWidth" Value="88" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
     <Style Selector="Button.secondary">
       <Setter Property="Background" Value="{StaticResource SurfaceStrongBrush}" />
@@ -40,6 +44,10 @@
       <Setter Property="BorderBrush" Value="{StaticResource StrokeStrongBrush}" />
       <Setter Property="CornerRadius" Value="12" />
       <Setter Property="Padding" Value="16,10" />
+      <Setter Property="MinHeight" Value="42" />
+      <Setter Property="MinWidth" Value="88" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
     <Style Selector="Button.ghost">
       <Setter Property="Background" Value="#14FFFFFF" />
@@ -47,6 +55,21 @@
       <Setter Property="BorderBrush" Value="#22FFFFFF" />
       <Setter Property="CornerRadius" Value="12" />
       <Setter Property="Padding" Value="14,10" />
+      <Setter Property="MinHeight" Value="42" />
+      <Setter Property="MinWidth" Value="88" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.navigation">
+      <Setter Property="Background" Value="{StaticResource SurfaceStrongBrush}" />
+      <Setter Property="Foreground" Value="{StaticResource TextStrongBrush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource StrokeStrongBrush}" />
+      <Setter Property="CornerRadius" Value="12" />
+      <Setter Property="Padding" Value="16,10" />
+      <Setter Property="MinHeight" Value="44" />
+      <Setter Property="MinWidth" Value="116" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
     <Style Selector="ToggleButton.directory-tab">
       <Setter Property="Background" Value="{StaticResource SurfaceStrongBrush}" />
@@ -54,6 +77,10 @@
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="CornerRadius" Value="12" />
       <Setter Property="Padding" Value="12,8" />
+      <Setter Property="MinHeight" Value="40" />
+      <Setter Property="MinWidth" Value="76" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
     <Style Selector="ToggleButton.directory-tab:checked">
       <Setter Property="Background" Value="{StaticResource AccentSoftBrush}" />

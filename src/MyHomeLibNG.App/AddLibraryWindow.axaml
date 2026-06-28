@@ -9,6 +9,21 @@
         CanResize="False"
         WindowStartupLocation="CenterOwner"
         Background="#FFF4F1EA">
+  <Window.Styles>
+    <Style Selector="Button">
+      <Setter Property="MinHeight" Value="40" />
+      <Setter Property="MinWidth" Value="88" />
+      <Setter Property="Padding" Value="14,9" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="RadioButton">
+      <Setter Property="MinHeight" Value="32" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+  </Window.Styles>
+
+  <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
   <Border Background="#FFFBF9F4" BorderBrush="#FFE0D9CC" BorderThickness="1" CornerRadius="22" Padding="22">
     <Grid RowDefinitions="Auto,Auto,Auto,*,Auto">
       <StackPanel Grid.Row="0" Spacing="4">
@@ -108,4 +123,5 @@
       </StackPanel>
     </Grid>
   </Border>
+  </ScrollViewer>
 </Window>

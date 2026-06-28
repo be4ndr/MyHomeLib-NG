@@ -8,6 +8,20 @@
         Title="Settings"
         WindowStartupLocation="CenterOwner"
         Background="#FFF4F1EA">
+  <Window.Styles>
+    <Style Selector="Button">
+      <Setter Property="MinHeight" Value="40" />
+      <Setter Property="MinWidth" Value="88" />
+      <Setter Property="Padding" Value="14,9" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="TabItem">
+      <Setter Property="MinHeight" Value="38" />
+      <Setter Property="Padding" Value="12,8" />
+    </Style>
+  </Window.Styles>
+
   <Border Background="#FFFBF9F4" BorderBrush="#FFE0D9CC" BorderThickness="1" CornerRadius="22" Padding="22">
     <Grid RowDefinitions="Auto,*,Auto">
       <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,18">
@@ -15,7 +29,7 @@
         <TextBlock Text="Application preferences and diagnostics." Foreground="#FF5E676B" />
       </StackPanel>
 
-      <TabControl Grid.Row="1">
+      <TabControl Grid.Row="1" TabStripPlacement="Left">
         <TabItem Header="General">
           <StackPanel Margin="16" Spacing="10">
             <TextBlock Text="Startup and language preferences are not configurable yet." Foreground="#FF5E676B" TextWrapping="Wrap" />

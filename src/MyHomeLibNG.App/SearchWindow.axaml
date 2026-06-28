@@ -4,8 +4,8 @@
         x:Class="MyHomeLibNG.App.SearchWindow"
         Width="1180"
         Height="760"
-        MinWidth="980"
-        MinHeight="660"
+        MinWidth="900"
+        MinHeight="620"
         Title="Search"
         WindowStartupLocation="CenterOwner"
         Background="{StaticResource SurfaceAltBrush}">
@@ -35,6 +35,10 @@
       <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
       <Setter Property="CornerRadius" Value="12" />
       <Setter Property="Padding" Value="16,10" />
+      <Setter Property="MinHeight" Value="42" />
+      <Setter Property="MinWidth" Value="88" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
     <Style Selector="Button.secondary">
       <Setter Property="Background" Value="{StaticResource SurfaceStrongBrush}" />
@@ -42,6 +46,10 @@
       <Setter Property="BorderBrush" Value="{StaticResource StrokeStrongBrush}" />
       <Setter Property="CornerRadius" Value="12" />
       <Setter Property="Padding" Value="16,10" />
+      <Setter Property="MinHeight" Value="42" />
+      <Setter Property="MinWidth" Value="88" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
     <Style Selector="Border.availability-pill">
       <Setter Property="CornerRadius" Value="999" />
