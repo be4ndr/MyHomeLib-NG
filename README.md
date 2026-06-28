@@ -11,8 +11,15 @@ It is designed for readers, librarians, and collectors who need an offline-first
 
 - Free to download and use.
 - Open source repository with public issue tracking.
-- Cross-platform desktop binaries published in GitHub Releases.
+- Windows desktop binaries published in GitHub Releases.
 - Simple upgrade path: download a newer release and replace the previous installation.
+
+### Supported platforms
+
+- Windows 10 version 22H2 or later.
+- Windows 11.
+
+Windows 7 and Windows 8.1 are not supported.
 
 ## Stack choices
 
