@@ -14,18 +14,18 @@
 
     <Border Grid.Row="1" Grid.Column="0" Classes="panel" Margin="0,0,18,0">
       <Grid RowDefinitions="Auto,Auto,Auto,*">
-        <WrapPanel Orientation="Horizontal" ItemHeight="40" Margin="0,0,0,14">
+        <WrapPanel Orientation="Horizontal" Margin="0,0,0,14">
           <ToggleButton Classes="directory-tab" Margin="0,0,10,10" IsChecked="{Binding IsDirectoryAuthorsMode, Mode=OneWay}" Click="OnDirectoryAuthorsClicked">
-            <TextBlock Text="Authors" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
+            <TextBlock Text="Authors" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" TextWrapping="Wrap" TextAlignment="Center" VerticalAlignment="Center" MaxWidth="130" />
           </ToggleButton>
           <ToggleButton Classes="directory-tab" Margin="0,0,10,10" IsChecked="{Binding IsDirectoryTitlesMode, Mode=OneWay}" Click="OnDirectoryTitlesClicked">
-            <TextBlock Text="Titles" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
+            <TextBlock Text="Titles" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" TextWrapping="Wrap" TextAlignment="Center" VerticalAlignment="Center" MaxWidth="130" />
           </ToggleButton>
           <ToggleButton Classes="directory-tab" Margin="0,0,10,10" IsChecked="{Binding IsDirectorySeriesMode, Mode=OneWay}" Click="OnDirectorySeriesClicked">
-            <TextBlock Text="Series" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
+            <TextBlock Text="Series" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" TextWrapping="Wrap" TextAlignment="Center" VerticalAlignment="Center" MaxWidth="130" />
           </ToggleButton>
           <ToggleButton Classes="directory-tab" Margin="0,0,0,10" IsChecked="{Binding IsDirectoryGenresMode, Mode=OneWay}" Click="OnDirectoryGenresClicked">
-            <TextBlock Text="Genres" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" />
+            <TextBlock Text="Genres" FontWeight="SemiBold" Foreground="{StaticResource TextStrongBrush}" TextWrapping="Wrap" TextAlignment="Center" VerticalAlignment="Center" MaxWidth="130" />
           </ToggleButton>
         </WrapPanel>
 
@@ -55,9 +55,14 @@
                  Text="{Binding DirectoryFilterText}" />
 
         <Grid Grid.Row="3">
-          <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="220" Spacing="12" IsVisible="{Binding ShowFirstRunState}">
-            <TextBlock Text="Select a library to begin." TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource TextMutedBrush}" />
-            <Button Classes="primary" HorizontalAlignment="Center" Content="Add library" Click="OnAddLibraryClicked" />
+          <StackPanel x:Name="BrowseFirstRunState" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="220" Spacing="12" IsVisible="{Binding ShowFirstRunState}">
+            <TextBlock Text="A library is required." FontWeight="SemiBold" TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource TextStrongBrush}" />
+            <TextBlock Text="Add or select a library before browsing." TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource TextMutedBrush}" />
+          </StackPanel>
+
+          <StackPanel x:Name="BrowseNoActiveLibraryState" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="220" Spacing="12" IsVisible="{Binding ShowNoActiveLibraryState}">
+            <TextBlock Text="Select a library." FontWeight="SemiBold" TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource TextStrongBrush}" />
+            <TextBlock Text="Choose an active library before browsing." TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource TextMutedBrush}" />
           </StackPanel>
 
           <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="220" Spacing="12" IsVisible="{Binding ShowDirectoryPromptState}">

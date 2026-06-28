@@ -11,7 +11,7 @@ public partial class DirectoryView : UserControl
         InitializeComponent();
     }
 
-    private MainWindow? OwnerWindow => TopLevel.GetTopLevel(this) as MainWindow;
+    private IWorkspaceWindowActions? OwnerWindow => TopLevel.GetTopLevel(this) as IWorkspaceWindowActions;
 
     private void OnDirectoryAuthorsClicked(object? sender, RoutedEventArgs e)
     {

@@ -11,7 +11,7 @@ public partial class SearchView : UserControl
         InitializeComponent();
     }
 
-    private MainWindow? OwnerWindow => TopLevel.GetTopLevel(this) as MainWindow;
+    private IWorkspaceWindowActions? OwnerWindow => TopLevel.GetTopLevel(this) as IWorkspaceWindowActions;
 
     private async void OnAddLibraryClicked(object? sender, RoutedEventArgs e)
     {

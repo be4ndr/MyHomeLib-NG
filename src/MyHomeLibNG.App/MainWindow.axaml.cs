@@ -1,4 +1,3 @@
-using System.ComponentModel;
 using System.Diagnostics;
 using Avalonia;
 using Avalonia.Controls;
@@ -8,23 +7,13 @@ using Microsoft.Extensions.DependencyInjection;
 using MyHomeLibNG.App.ViewModels;
 using MyHomeLibNG.Application;
 using MyHomeLibNG.Core.Enums;
-using MyHomeLibNG.App.Views;
 using MyHomeLibNG.Core.Models;
 
 namespace MyHomeLibNG.App;
 
-public partial class MainWindow : Window
+public partial class MainWindow : Window, IWorkspaceWindowActions
 {
-    public static readonly DirectProperty<MainWindow, Control?> CurrentViewProperty =
-        AvaloniaProperty.RegisterDirect<MainWindow, Control?>(
-            nameof(CurrentView),
-            window => window.CurrentView);
-
     private readonly MainWindowViewModel _viewModel;
-    private readonly LibrariesView _librariesView = new();
-    private readonly SearchView _searchView = new();
-    private readonly DirectoryView _directoryView = new();
-    private Control? _currentView;
 
     public MainWindow()
         : this(((App)Avalonia.Application.Current!).Services.GetRequiredService<MainWindowViewModel>())
@@ -36,48 +25,61 @@ public partial class MainWindow : Window
         _viewModel = viewModel;
         InitializeComponent();
         DataContext = _viewModel;
-        _viewModel.PropertyChanged += OnViewModelPropertyChanged;
         Closed += OnClosed;
         Opened += OnOpened;
-        UpdateCurrentView();
     }
 
-    public Control? CurrentView
-    {
-        get => _currentView;
-        private set => SetAndRaise(CurrentViewProperty, ref _currentView, value);
-    }
+    public LibraryManagerWindow? LastOpenedLibraryManagerWindow { get; private set; }
+    public SearchWindow? LastOpenedSearchWindow { get; private set; }
+    public BrowseWindow? LastOpenedBrowseWindow { get; private set; }
+    public SettingsWindow? LastOpenedSettingsWindow { get; private set; }
+    public AddLibraryWindow? LastOpenedAddLibraryWindow { get; private set; }
 
-    internal async Task HandleLibrariesSelectionChangedAsync()
+    public async Task HandleLibrariesSelectionChangedAsync()
     {
         await _viewModel.OnSelectedLibraryChangedAsync();
     }
 
-    internal async Task HandleBooksSelectionChangedAsync()
+    public async Task HandleBooksSelectionChangedAsync()
     {
         await _viewModel.OnSelectedBookChangedAsync();
     }
 
-    internal async Task HandleSearchClickedAsync()
+    public async Task HandleSearchClickedAsync()
+    {
+        OpenSearchWindow(executeOnOpen: !string.IsNullOrWhiteSpace(_viewModel.SearchQuery) && _viewModel.CanSearch);
+        await Task.CompletedTask;
+    }
+
+    public async Task ExecuteSearchAsync()
     {
         _viewModel.SetMode(AppMode.Search);
         await _viewModel.SearchAsync();
     }
 
-    internal async Task HandleRefreshClickedAsync()
+    public async Task HandleRefreshClickedAsync()
     {
         await _viewModel.RefreshAsync();
     }
 
-    internal void HandleSettingsClicked()
+    public async Task HandleSettingsClickedAsync()
     {
-        _viewModel.ReportActionSuccess("Settings will land in a dedicated preferences screen in the next iteration.");
+        LastOpenedSettingsWindow = new SettingsWindow(this);
+        LastOpenedSettingsWindow.Show(this);
+        await Task.CompletedTask;
     }
 
-    internal async Task HandleAddLibraryClickedAsync()
+    public async Task HandleManageLibrariesClickedAsync()
     {
-        var dialog = new AddLibraryWindow();
-        var profile = await dialog.ShowDialog<LibraryProfile?>(this);
+        LastOpenedLibraryManagerWindow = new LibraryManagerWindow(this, _viewModel);
+        LastOpenedLibraryManagerWindow.Show(this);
+        await Task.CompletedTask;
+    }
+
+    public async Task HandleAddLibraryClickedAsync()
+    {
+        LastOpenedAddLibraryWindow = new AddLibraryWindow();
+        var profile = await LastOpenedAddLibraryWindow.ShowDialog<LibraryProfile?>(this);
         if (profile is null)
         {
             return;
@@ -91,7 +93,7 @@ public partial class MainWindow : Window
         }
     }
 
-    internal async Task HandleDeleteLibraryClickedAsync(LibraryProfileItemViewModel library)
+    public async Task HandleDeleteLibraryClickedAsync(LibraryProfileItemViewModel library)
     {
         ArgumentNullException.ThrowIfNull(library);
 
@@ -105,7 +107,7 @@ public partial class MainWindow : Window
         await _viewModel.DeleteLibraryAsync(library);
     }
 
-    internal async Task HandlePrimaryBookActionClickedAsync()
+    public async Task HandlePrimaryBookActionClickedAsync()
     {
         try
         {
@@ -134,7 +136,7 @@ public partial class MainWindow : Window
         }
     }
 
-    internal async Task HandleCopyLinkClickedAsync()
+    public async Task HandleCopyLinkClickedAsync()
     {
         var link = _viewModel.GetPreferredLink();
         if (string.IsNullOrWhiteSpace(link))
@@ -154,22 +156,29 @@ public partial class MainWindow : Window
         _viewModel.ReportActionSuccess("Copied the best available book link to the clipboard.");
     }
 
-    internal void HandleLibrariesModeClicked()
+    public void HandleLibrariesModeClicked()
     {
-        _viewModel.SetMode(AppMode.Libraries);
+        _ = HandleManageLibrariesClickedAsync();
     }
 
-    internal void HandleSearchModeClicked()
+    public void HandleSearchModeClicked()
     {
-        _viewModel.SetMode(AppMode.Search);
+        OpenSearchWindow(executeOnOpen: false);
     }
 
-    internal async Task HandleDirectoryModeClickedAsync()
+    public async Task HandleDirectoryModeClickedAsync()
+    {
+        LastOpenedBrowseWindow = new BrowseWindow(this, _viewModel);
+        LastOpenedBrowseWindow.Show(this);
+        await Task.CompletedTask;
+    }
+
+    public async Task OpenDirectoryAsync()
     {
         await _viewModel.OpenDirectoryModeAsync();
     }
 
-    internal Task HandleScanLocalClickedAsync()
+    public Task HandleScanLocalClickedAsync()
     {
         if (_viewModel.SelectedLibrary?.Profile is not { } profile)
         {
@@ -207,27 +216,27 @@ public partial class MainWindow : Window
         await _viewModel.RefreshAsync();
     }
 
-    internal void HandleClearSearchFiltersClicked()
+    public void HandleClearSearchFiltersClicked()
     {
         _viewModel.ResetStructuredSearch();
     }
 
-    internal void HandleDirectoryAuthorsClicked()
+    public void HandleDirectoryAuthorsClicked()
     {
         _viewModel.SetDirectoryBrowseMode(DirectoryBrowseMode.Authors);
     }
 
-    internal void HandleDirectoryTitlesClicked()
+    public void HandleDirectoryTitlesClicked()
     {
         _viewModel.SetDirectoryBrowseMode(DirectoryBrowseMode.Titles);
     }
 
-    internal void HandleDirectorySeriesClicked()
+    public void HandleDirectorySeriesClicked()
     {
         _viewModel.SetDirectoryBrowseMode(DirectoryBrowseMode.Series);
     }
 
-    internal void HandleDirectoryGenresClicked()
+    public void HandleDirectoryGenresClicked()
     {
         _viewModel.SetDirectoryBrowseMode(DirectoryBrowseMode.Genres);
     }
@@ -241,31 +250,17 @@ public partial class MainWindow : Window
     private void OnClosed(object? sender, EventArgs e)
     {
         Closed -= OnClosed;
-        _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
-    }
-
-    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (string.IsNullOrEmpty(e.PropertyName) ||
-            e.PropertyName == nameof(MainWindowViewModel.CurrentMode))
-        {
-            UpdateCurrentView();
-        }
-    }
-
-    private void UpdateCurrentView()
-    {
-        CurrentView = _viewModel.CurrentMode switch
-        {
-            AppMode.Search => _searchView,
-            AppMode.Directory => _directoryView,
-            _ => _librariesView
-        };
     }
 
     private void InitializeComponent()
     {
         AvaloniaXamlLoader.Load(this);
+    }
+
+    private void OpenSearchWindow(bool executeOnOpen)
+    {
+        LastOpenedSearchWindow = new SearchWindow(this, _viewModel, executeOnOpen);
+        LastOpenedSearchWindow.Show(this);
     }
 
     private async void OnLibrariesSelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -288,9 +283,9 @@ public partial class MainWindow : Window
         await HandleRefreshClickedAsync();
     }
 
-    private void OnSettingsClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    private async void OnSettingsClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
-        HandleSettingsClicked();
+        await HandleSettingsClickedAsync();
     }
 
     private async void OnAddLibraryClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
@@ -330,7 +325,7 @@ public partial class MainWindow : Window
 
     private void OnLibrariesModeClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
-        HandleLibrariesModeClicked();
+        _ = HandleManageLibrariesClickedAsync();
     }
 
     private void OnSearchModeClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)

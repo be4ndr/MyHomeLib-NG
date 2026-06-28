@@ -14,7 +14,7 @@
           </Border>
         </DockPanel>
 
-        <Border Grid.Row="1" Background="{StaticResource SurfaceAltBrush}" CornerRadius="18" Padding="18" Margin="0,0,0,18">
+        <Border Grid.Row="1" Background="{StaticResource SurfaceAltBrush}" CornerRadius="18" Padding="18" Margin="0,0,0,18" IsEnabled="{Binding HasSelectedLibrary}">
           <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="*,*">
             <TextBox x:Name="StructuredSearchQueryTextBox"
                      Grid.ColumnSpan="2"
@@ -51,9 +51,16 @@
               <Border Width="72" Height="72" CornerRadius="24" Background="{StaticResource AccentSoftBrush}" HorizontalAlignment="Center">
                 <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="L" FontSize="26" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
               </Border>
-              <TextBlock Text="Select a library to begin" FontSize="24" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="{StaticResource TextStrongBrush}" />
-              <TextBlock Text="Add a library first." TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource TextMutedBrush}" />
-              <Button Classes="primary" HorizontalAlignment="Center" Content="Add library" Click="OnAddLibraryClicked" />
+              <TextBlock Text="A library is required" FontSize="24" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="{StaticResource TextStrongBrush}" />
+              <TextBlock Text="Add or select a library before searching." TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource TextMutedBrush}" />
+            </StackPanel>
+
+            <StackPanel x:Name="SearchNoActiveLibraryState" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="480" Spacing="12" IsVisible="{Binding ShowNoActiveLibraryState}">
+              <Border Width="72" Height="72" CornerRadius="24" Background="{StaticResource AccentSoftBrush}" HorizontalAlignment="Center">
+                <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="L" FontSize="26" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
+              </Border>
+              <TextBlock Text="Select a library" FontSize="24" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="{StaticResource TextStrongBrush}" />
+              <TextBlock Text="Choose an active library before searching." TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource TextMutedBrush}" />
             </StackPanel>
 
             <StackPanel x:Name="SearchPromptState" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="520" Spacing="12" IsVisible="{Binding ShowSearchPromptState}">

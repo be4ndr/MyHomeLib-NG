@@ -1,0 +1,70 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:views="using:MyHomeLibNG.App.Views"
+        x:Class="MyHomeLibNG.App.SearchWindow"
+        Width="1180"
+        Height="760"
+        MinWidth="900"
+        MinHeight="620"
+        Title="Search"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource SurfaceAltBrush}">
+  <Window.Resources>
+    <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFBF9F4" />
+    <SolidColorBrush x:Key="SurfaceStrongBrush" Color="#FFFFFFFF" />
+    <SolidColorBrush x:Key="SurfaceAltBrush" Color="#FFF0ECE3" />
+    <SolidColorBrush x:Key="AccentBrush" Color="#FF2B6A69" />
+    <SolidColorBrush x:Key="AccentSoftBrush" Color="#FFDDEBE8" />
+    <SolidColorBrush x:Key="StrokeBrush" Color="#FFE0D9CC" />
+    <SolidColorBrush x:Key="StrokeStrongBrush" Color="#FFC6BAA8" />
+    <SolidColorBrush x:Key="TextStrongBrush" Color="#FF1F2527" />
+    <SolidColorBrush x:Key="TextMutedBrush" Color="#FF5E676B" />
+  </Window.Resources>
+
+  <Window.Styles>
+    <Style Selector="Border.panel">
+      <Setter Property="Background" Value="{StaticResource SurfaceBrush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource StrokeBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="22" />
+      <Setter Property="Padding" Value="20" />
+    </Style>
+    <Style Selector="Button.primary">
+      <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+      <Setter Property="Foreground" Value="White" />
+      <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+      <Setter Property="CornerRadius" Value="12" />
+      <Setter Property="Padding" Value="16,10" />
+      <Setter Property="MinHeight" Value="42" />
+      <Setter Property="MinWidth" Value="88" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.secondary">
+      <Setter Property="Background" Value="{StaticResource SurfaceStrongBrush}" />
+      <Setter Property="Foreground" Value="{StaticResource TextStrongBrush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource StrokeStrongBrush}" />
+      <Setter Property="CornerRadius" Value="12" />
+      <Setter Property="Padding" Value="16,10" />
+      <Setter Property="MinHeight" Value="42" />
+      <Setter Property="MinWidth" Value="88" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Border.availability-pill">
+      <Setter Property="CornerRadius" Value="999" />
+      <Setter Property="Padding" Value="10,4" />
+    </Style>
+    <Style Selector="Border.availability-pill.ready">
+      <Setter Property="Background" Value="{StaticResource AccentSoftBrush}" />
+    </Style>
+    <Style Selector="Border.availability-pill.unavailable">
+      <Setter Property="Background" Value="#FFE9E5DC" />
+    </Style>
+    <Style Selector="Border.availability-pill.warning">
+      <Setter Property="Background" Value="#FFF7E4CC" />
+    </Style>
+  </Window.Styles>
+
+  <views:SearchView Margin="18" />
+</Window>
