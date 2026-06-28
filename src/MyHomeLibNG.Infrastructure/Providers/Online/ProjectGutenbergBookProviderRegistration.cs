@@ -24,6 +24,6 @@ public sealed class ProjectGutenbergBookProviderRegistration : IBookProviderRegi
 
     public IBookProvider Create(LibraryProfile profile)
         => new ProjectGutenbergBookProvider(
-            _httpClientFactory.CreateClient(HttpClientNames.ProjectGutenberg),
+            ProfileConfiguredHttpClient.Create(_httpClientFactory, HttpClientNames.ProjectGutenberg, profile),
             _httpExecutor);
 }

@@ -285,6 +285,12 @@ public partial class AddLibraryWindow : Window, INotifyPropertyChanged
             return false;
         }
 
+        if (!IsValidHttpUrl(OnlineSourceUrl.Trim()))
+        {
+            ValidationMessage = "Online source URL must be an absolute HTTP or HTTPS URL.";
+            return false;
+        }
+
         profile = new LibraryProfile
         {
             Name = LibraryName.Trim(),
@@ -299,6 +305,12 @@ public partial class AddLibraryWindow : Window, INotifyPropertyChanged
         };
 
         return true;
+    }
+
+    private static bool IsValidHttpUrl(string value)
+    {
+        return Uri.TryCreate(value, UriKind.Absolute, out var uri) &&
+               (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
     }
 
     private bool SetProperty<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)

@@ -24,6 +24,6 @@ public sealed class GoogleBooksBookProviderRegistration : IBookProviderRegistrat
 
     public IBookProvider Create(LibraryProfile profile)
         => new GoogleBooksBookProvider(
-            _httpClientFactory.CreateClient(HttpClientNames.GoogleBooks),
+            ProfileConfiguredHttpClient.Create(_httpClientFactory, HttpClientNames.GoogleBooks, profile),
             _httpExecutor);
 }

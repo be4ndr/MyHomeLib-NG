@@ -113,7 +113,8 @@
 
       <StackPanel Grid.Row="4" Margin="0,16,0,0" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
         <Button Content="Cancel" Click="OnCancelClicked" />
-        <Button Background="#FF2B6A69"
+        <Button x:Name="AddLibrarySaveButton"
+                Background="#FF2B6A69"
                 Foreground="White"
                 BorderBrush="#FF2B6A69"
                 CornerRadius="12"

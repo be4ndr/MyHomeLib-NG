@@ -66,4 +66,34 @@ public sealed class AddLibraryWindowHeadlessTests
             Dispatcher.UIThread.RunJobs();
         }
     }
+
+    [AvaloniaFact]
+    public void AddLibraryWindow_RejectsInvalidOnlineUrl()
+    {
+        var window = new AddLibraryWindow();
+        try
+        {
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+
+            window.IsOnlineSourceSelected = true;
+            window.LibraryName = "Custom source";
+            window.OnlineSourceUrl = "not-a-url";
+            Dispatcher.UIThread.RunJobs();
+
+            var saveButton = window.FindControl<Button>("AddLibrarySaveButton");
+            Assert.NotNull(saveButton);
+
+            saveButton.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.True(window.HasValidationMessage);
+            Assert.Equal("Online source URL must be an absolute HTTP or HTTPS URL.", window.ValidationMessage);
+        }
+        finally
+        {
+            window.Close();
+            Dispatcher.UIThread.RunJobs();
+        }
+    }
 }
