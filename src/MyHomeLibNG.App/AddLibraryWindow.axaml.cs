@@ -131,7 +131,7 @@ public partial class AddLibraryWindow : Window, INotifyPropertyChanged
     public string OnlineSourceUrl
     {
         get => _onlineSourceUrl;
-        set => SetProperty(ref _onlineSourceUrl, value);
+        private set => SetProperty(ref _onlineSourceUrl, value);
     }
 
     public string? ValidationMessage
@@ -279,7 +279,8 @@ public partial class AddLibraryWindow : Window, INotifyPropertyChanged
             return true;
         }
 
-        if (string.IsNullOrWhiteSpace(OnlineSourceUrl))
+        var presetApiBaseUrl = SelectedOption.ApiBaseUrl.Trim();
+        if (string.IsNullOrWhiteSpace(presetApiBaseUrl))
         {
             ValidationMessage = "Online sources require a URL.";
             return false;
@@ -298,7 +299,8 @@ public partial class AddLibraryWindow : Window, INotifyPropertyChanged
             LibraryType = LibraryType.Online,
             OnlineSource = new OnlineLibrarySourceSettings
             {
-                ApiBaseUrl = OnlineSourceUrl.Trim(),
+                // TODO: Support custom provider base URLs end-to-end.
+                ApiBaseUrl = presetApiBaseUrl,
                 SearchEndpoint = SelectedOption.SearchEndpoint
             },
             CreatedAtUtc = DateTimeOffset.UtcNow
