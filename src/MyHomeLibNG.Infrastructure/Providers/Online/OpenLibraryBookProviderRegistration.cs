@@ -24,6 +24,6 @@ public sealed class OpenLibraryBookProviderRegistration : IBookProviderRegistrat
 
     public IBookProvider Create(LibraryProfile profile)
         => new OpenLibraryBookProvider(
-            _httpClientFactory.CreateClient(HttpClientNames.OpenLibrary),
+            ProfileConfiguredHttpClient.Create(_httpClientFactory, HttpClientNames.OpenLibrary, profile),
             _httpExecutor);
 }
