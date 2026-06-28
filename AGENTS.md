@@ -6,7 +6,7 @@ MyHomeLib-NG is a freeware, offline-first desktop library manager inspired by th
 
 Stack:
 
-* C# / .NET 8
+* C# / .NET 10
 * Avalonia UI
 * SQLite
 * Modular monolith
@@ -33,7 +33,9 @@ src/
   MyHomeLibNG.Application/     # application services and use cases
   MyHomeLibNG.Infrastructure/  # SQLite, filesystem, ZIP/FB2/INPX, providers
 tests/
-  MyHomeLibNG.Tests/           # current unit/integration tests
+  MyHomeLibNG.Tests/           # Core/Application/Infrastructure unit and integration tests
+  MyHomeLibNG.App.Tests/       # App/ViewModel tests
+  MyHomeLibNG.App.HeadlessTests/ # Avalonia Headless UI tests
 ```
 
 Dependency rules:
@@ -47,6 +49,85 @@ Dependency rules:
 
 ---
 
+## Agentic Development Workflow
+
+Use this repository guidance for Codex, Claude, ChatGPT, GitHub Copilot, and other AI-assisted contributors.
+
+Before coding:
+
+1. Read the issue, linked discussion, and relevant docs.
+2. Inspect the current implementation with repository search before proposing a design.
+3. Identify the narrow affected area and the existing tests that describe it.
+4. State assumptions when requirements are incomplete.
+5. Prefer the smallest change that satisfies the acceptance criteria.
+
+While coding:
+
+* Keep production behavior unchanged unless the task explicitly asks for behavior change.
+* Preserve public APIs unless the task explicitly requires an API change.
+* Keep commits and patches focused on one concern.
+* Avoid broad rewrites, formatting churn, generated-file churn, and unrelated cleanup.
+* Update or add tests in the test project that matches the changed layer.
+* Keep local validation data under `example/` out of commits.
+
+Before finishing:
+
+* Run targeted tests for the changed area.
+* Run full validation when practical.
+* Report exact commands and whether they passed, failed, or were skipped.
+* Summarize risks, compatibility impact, and any follow-up work.
+
+---
+
+## Architecture Responsibilities
+
+### Core
+
+Core owns domain types, enums, interfaces, normalization, matching, and logic that can run without infrastructure.
+
+Rules:
+
+* No Avalonia, SQLite, filesystem, HTTP, or DI dependencies.
+* Prefer immutable or simple data models where practical.
+* Keep parsing and normalization deterministic and easy to unit test.
+* Add focused unit tests for edge cases and compatibility-sensitive behavior.
+
+### Application
+
+Application owns orchestration and use cases.
+
+Rules:
+
+* Depend on Core abstractions, not concrete UI or SQLite implementation details.
+* Keep long-running use cases async and cancellation-aware where practical.
+* Use repositories/providers through interfaces.
+* Test orchestration with fakes rather than real UI, network, or persistent databases.
+
+### Infrastructure
+
+Infrastructure owns SQLite, filesystem access, ZIP/FB2/INPX parsing, provider implementations, and storage.
+
+Rules:
+
+* Keep hot paths streaming, batched, and memory-bounded.
+* Avoid repeated parsing, repeated normalization, and unbounded concurrency.
+* Use temporary databases and fixtures for integration tests.
+* Preserve compatibility with existing local databases and catalog formats when practical.
+
+### App / ViewModels
+
+App owns Avalonia views, windows, ViewModels, composition, and platform actions.
+
+Rules:
+
+* Keep UI state in ViewModels where it can be tested without Avalonia.
+* Do not access SQLite directly from UI code.
+* Do not block the UI thread.
+* Do not rename bound properties without updating XAML and tests.
+* Use Avalonia Headless tests for binding, visibility, and interaction behavior.
+
+---
+
 ## General Rules
 
 * Keep changes focused on the requested task.
@@ -56,8 +137,10 @@ Dependency rules:
 * Do not add dependencies unless clearly needed.
 * Do not redesign UI unless explicitly requested.
 * Preserve existing behavior unless the task asks to change it.
+* Preserve backward compatibility with existing local databases and offline catalogs when practical.
 * Prefer readable, maintainable code over clever code.
 * Do not claim tests passed unless they were actually run.
+* Mention skipped validation and the reason it was skipped.
 
 ---
 
@@ -75,6 +158,16 @@ For each task:
 8. Summarize changed files, tests, validation, and risks.
 
 If requirements are unclear, make the smallest safe assumption and mention it in the final response.
+
+---
+
+## Commit and PR Expectations
+
+* Keep each commit scoped to one logical change.
+* Separate behavior changes from refactors when possible.
+* Keep documentation-only changes out of production-code commits.
+* PR descriptions should include goal, scope, tests, validation, and risk.
+* Do not mix UI redesign, backend behavior, and architecture cleanup in one PR unless explicitly requested.
 
 ---
 
@@ -249,6 +342,8 @@ Use streaming, batching, transactions, and cancellation tokens where practical.
 * Keep schema initialization idempotent.
 * Keep migration/backfill bounded.
 * Preserve compatibility with existing local databases where practical.
+* Keep search semantics compatible with the current indexed-field approach unless the task explicitly asks for FTS or ranking changes.
+* Use parameters for data values; do not concatenate user or catalog values into SQL.
 
 When changing schema:
 
@@ -268,6 +363,9 @@ When changing schema:
 * Do not rename bound ViewModel properties casually.
 * Keep empty, loading, and error states clear.
 * Avoid mixing UI layout changes with backend behavior changes.
+* Keep XAML bindings aligned with ViewModel property names and tests.
+* Use headless tests for important binding, visibility, dialog, and interaction changes.
+* Keep platform-specific actions behind app-level services or window action abstractions.
 
 ---
 

@@ -54,6 +54,14 @@ This keeps infrastructure and UI concerns separated from domain concerns:
 - Core does not depend on Infrastructure.
 - Application does not depend on Avalonia.
 
+## AI-assisted development
+
+Repository guidance for Codex, Claude, ChatGPT, GitHub Copilot, and other AI-assisted contributors lives in:
+
+- `AGENTS.md`
+- `docs/agentic/`
+- `.codex/prompts/`
+
 ## Offline ZIP/FB2 import
 
 Local folder libraries use:

@@ -1,4 +1,6 @@
-﻿You are reviewing a pull request for MyHomeLib-NG.
+You are reviewing a pull request for MyHomeLib-NG.
+
+Read `AGENTS.md`, the PR description, changed files, and related tests before reviewing.
 
 Project stack:
 - C# / .NET 10
@@ -29,7 +31,9 @@ Check whether:
 - Async code uses cancellation where practical.
 - Long-running operations do not block the UI thread.
 - SQLite writes are batched where relevant.
+- SQLite schema and repository changes preserve existing local databases where practical.
 - No local-only sample data was committed.
+- The PR avoids unrelated refactoring, formatting churn, and behavior drift.
 
 Output:
 - Summary
